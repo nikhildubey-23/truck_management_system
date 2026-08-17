@@ -619,6 +619,11 @@ body {
     font-size: 0.9rem;
     color: var(--primary);
     white-space: nowrap;
+    text-decoration: none;
+}
+.wo-card-num:hover {
+    text-decoration: underline;
+    opacity: 0.85;
 }
 .wo-card-truck {
     font-weight: 600;

@@ -21,7 +21,7 @@
         <tbody>
             {% for p in plants %}
             <tr>
-                <td class="text-muted">{{ p.id }}</td>
+                <td class="text-muted">{{ loop.index }}</td>
                 <td><strong>{{ p.name }}</strong></td>
                 <td>{{ p.location or '-' }}</td>
                 <td class="no-print text-end">

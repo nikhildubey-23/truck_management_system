@@ -98,7 +98,7 @@
         {% for wo in group.work_orders %}
         <div class="wo-card">
             <div class="wo-card-main">
-                <span class="wo-card-num">{{ wo.work_order_number or wo.id }}</span>
+                <a href="{{ url_for('work_order_records.view', id=wo.id) }}" class="wo-card-num">{{ wo.work_order_number or ('WO-' ~ wo.id) }}</a>
                 <span class="wo-card-date">{{ wo.date }}</span>
                 <span class="wo-card-sep">|</span>
                 <span class="wo-card-truck"><i class="bi bi-truck me-1"></i>{{ wo.lorry_number }}</span>
