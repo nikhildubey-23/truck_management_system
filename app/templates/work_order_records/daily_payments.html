@@ -73,7 +73,7 @@
                     <td>{{ e.lorry_number }}</td>
                     <td>{{ e.account_name }}</td>
                     <td>{{ e.mine_name }}</td>
-                    <td>{{ e.ddtds if e.ddtds else '-' }}</td>
+                    <td>{{ e.ddtds.isoformat() if e.ddtds else '-' }}</td>
                     <td class="text-end">{{ "%.0f"|format(e.freight) if e.freight else '' }}</td>
                     <td class="text-end">{{ "%.0f"|format(e.cash) if e.cash else '' }}</td>
                     <td class="text-end">{{ "%.0f"|format(e.loading) if e.loading else '' }}</td>
