@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <div>
+        <h3><i class="bi bi-currency-rupee me-1"></i> Daily Payments</h3>
+        <div class="subtitle">Freight &minus; all deductions = Net (vs RTGS)</div>
+    </div>
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addPaymentModal">
+            <i class="bi bi-plus-circle me-1"></i> New Payment
+        </button>
+        <a href="{{ url_for('work_order_records.work_orders') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Back</a>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body py-3">
+        <form method="GET" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label"><strong>Date From</strong></label>
+                <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label"><strong>Date To</strong></label>
+                <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-funnel me-1"></i> Filter</button>
+                <a href="{{ url_for('work_order_records.daily_payments') }}" class="btn btn-outline-secondary"><i class="bi bi-x-circle me-1"></i> Clear</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if sorted_dates %}
+{% for date_key in sorted_dates %}
+{% set entries = daily_groups[date_key] %}
+<div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2 py-2">
+        <span><i class="bi bi-calendar me-1"></i> <strong>{{ date_key }}</strong> &mdash; {{ entries|length }} entry(ies)</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0 small">
+            <thead class="table-light align-middle">
+                <tr>
+                    <th rowspan="2">#</th>
+                    <th rowspan="2">WO</th>
+                    <th rowspan="2">Lorry</th>
+                    <th rowspan="2">Account</th>
+                    <th rowspan="2">Mine</th>
+                    <th rowspan="2" style="min-width:90px;">DD TDS Date</th>
+                    <th class="text-end" style="min-width:85px;">Freight</th>
+                    <th class="text-end" style="min-width:65px;">Cash</th>
+                    <th class="text-end" style="min-width:65px;">Loading</th>
+                    <th class="text-end" style="min-width:65px;">Advance</th>
+                    <th class="text-end" style="min-width:65px;">Short</th>
+                    <th class="text-end" style="min-width:65px;">Short Amt</th>
+                    <th class="text-end" style="min-width:75px;">Munsiyana</th>
+                    <th class="text-end" style="min-width:55px;">TDS</th>
+                    <th class="text-end" style="min-width:65px;">Acc Adv</th>
+                    <th class="text-end" style="min-width:65px;">Petrol</th>
+                    <th class="text-end" style="min-width:80px;">Total Deduct</th>
+                    <th class="text-end text-primary" style="min-width:75px;"><strong>Net</strong></th>
+                    <th class="text-end text-success" style="min-width:65px;"><strong>RTGS</strong></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for e in entries %}
+                {% set diff = e.net - e.rtgs %}
+                <tr class="{{ 'table-warning' if diff != 0 }}">
+                    <td>{{ loop.index }}</td>
+                    <td><a href="{{ url_for('work_order_records.view', id=e.id) }}">{{ e.work_order_number }}</a></td>
+                    <td>{{ e.lorry_number }}</td>
+                    <td>{{ e.account_name }}</td>
+                    <td>{{ e.mine_name }}</td>
+                    <td>{{ e.ddtds if e.ddtds else '-' }}</td>
+                    <td class="text-end">{{ "%.0f"|format(e.freight) if e.freight else '' }}</td>
+                    <td class="text-end">{{ "%.0f"|format(e.cash) if e.cash else '' }}</td>
+                    <td class="text-end">{{ "%.0f"|format(e.loading) if e.loading else '' }}</td>
+                    <td class="text-end">{{ "%.0f"|format(e.advance) if e.advance else '' }}</td>
+                    <td class="text-end">{{ "%.0f"|format(e.shortage) if e.shortage else '' }}</td>
+                    <td class="text-end">{{ "%.0f"|format(e.short_amt) if e.short_amt else '' }}</td>
+                    <td class="text-end">{{ "%.0f"|format(e.munsiyana) if e.munsiyana else '' }}</td>
+                    <td class="text-end">{{ "%.0f"|format(e.tds) if e.tds else '' }}</td>
+                    <td class="text-end">{{ "%.0f"|format(e.account_advance) if e.account_advance else '' }}</td>
+                    <td class="text-end">{{ "%.0f"|format(e.petrol) if e.petrol else '' }}</td>
+                    <td class="text-end fw-bold">{{ "%.0f"|format(e.deductions) }}</td>
+                    <td class="text-end text-primary"><strong>{{ "%.0f"|format(e.net) }}</strong></td>
+                    <td class="text-end text-success">
+                        <strong>{{ "%.0f"|format(e.rtgs) }}</strong>
+                        {% if diff != 0 %}
+                        <br><small class="text-danger">({{ "%+0.0f"|format(diff) }})</small>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endfor %}
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-sm mb-0 small">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Grand Total</th>
+                        <th></th>
+                        <th class="text-end">{{ "%.0f"|format(grand_freight) }}</th>
+                        <th class="text-end">{{ "%.0f"|format(grand_cash) }}</th>
+                        <th class="text-end">{{ "%.0f"|format(grand_loading) }}</th>
+                        <th class="text-end">{{ "%.0f"|format(grand_advance) }}</th>
+                        <th class="text-end">{{ "%.0f"|format(grand_shortage) }}</th>
+                        <th class="text-end">{{ "%.0f"|format(grand_short_amt) }}</th>
+                        <th class="text-end">{{ "%.0f"|format(grand_munsiyana) }}</th>
+                        <th class="text-end">{{ "%.0f"|format(grand_tds) }}</th>
+                        <th class="text-end">{{ "%.0f"|format(grand_account_advance) }}</th>
+                        <th class="text-end">{{ "%.0f"|format(grand_petrol) }}</th>
+                        <th class="text-end">{{ "%.0f"|format(grand_deductions) }}</th>
+                        <th class="text-end text-primary">{{ "%.0f"|format(grand_net) }}</th>
+                        <th class="text-end text-success">{{ "%.0f"|format(grand_rtgs) }}</th>
+                    </tr>
+                </thead>
+            </table>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="alert alert-info mb-0">No records found for the selected date range.</div>
+{% endif %}
+
+<div class="modal fade" id="addPaymentModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <form method="POST" action="/work-orders/daily-payments/add">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-plus-circle me-1"></i> New Payment Entry</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Date <span class="text-danger">*</span></label>
+                            <input type="date" name="date" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Lorry Number <span class="text-danger">*</span></label>
+                            <input type="text" name="lorry_number" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Account Name</label>
+                            <input type="text" name="account_name" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Mine</label>
+                            <select name="mine_id" class="form-select form-select-sm">
+                                <option value="">-- Select --</option>
+                                {% for m in mines %}
+                                <option value="{{ m.id }}">{{ m.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Remark</label>
+                            <input type="text" name="remark" class="form-control form-control-sm">
+                        </div>
+                    </div>
+                    <hr>
+                    <h6 class="fw-bold">Amounts (&#8377;)</h6>
+                    <div class="row g-2">
+                        <div class="col-md-3">
+                            <label class="form-label small">Freight</label>
+                            <input type="number" step="0.01" name="total_freight" class="form-control form-control-sm" value="0">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">Cash</label>
+                            <input type="number" step="0.01" name="cash" class="form-control form-control-sm" value="0">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">Loading</label>
+                            <input type="number" step="0.01" name="loading" class="form-control form-control-sm" value="0">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">Advance</label>
+                            <input type="number" step="0.01" name="total_advance" class="form-control form-control-sm" value="0">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">Shortage (ton)</label>
+                            <input type="number" step="0.01" name="shortage" class="form-control form-control-sm" value="0">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">Short Amt</label>
+                            <input type="number" step="0.01" name="short_amt" class="form-control form-control-sm" value="0">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">Munsiyana</label>
+                            <input type="number" step="0.01" name="munsiyana" class="form-control form-control-sm" value="0">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">TDS</label>
+                            <input type="number" step="0.01" name="tds" class="form-control form-control-sm" value="0">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">DD TDS Date</label>
+                            <input type="date" name="ddtds" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">Account Adv</label>
+                            <input type="number" step="0.01" name="account_advance" class="form-control form-control-sm" value="0">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">RTGS</label>
+                            <input type="number" step="0.01" name="rtgs" class="form-control form-control-sm" value="0">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">Petrol</label>
+                            <input type="number" step="0.01" name="petrol" class="form-control form-control-sm" value="0">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">Petrol Station</label>
+                            <input type="text" name="petrol_name" class="form-control form-control-sm" placeholder="Station name">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success"><i class="bi bi-check-lg me-1"></i> Save Payment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

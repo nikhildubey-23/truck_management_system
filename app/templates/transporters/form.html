@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <h3>{% if transporter %}Edit Transporter{% else %}Add Transporter{% endif %}</h3>
+    <div class="subtitle">{% if transporter %}Update transporter details{% else %}Register a new transporter{% endif %}</div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-person me-1"></i> Transporter Details</div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">Name <span class="text-danger">*</span></label>
+                        <input type="text" name="name" class="form-control" value="{{ transporter.name if transporter else '' }}" placeholder="e.g. Ravi Transport" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">PAN Card</label>
+                        <input type="text" name="pan_card" class="form-control" value="{{ transporter.pan_card if transporter else '' }}" placeholder="e.g. ABCDE1234F">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Bank Account Number</label>
+                        <input type="text" name="bank_account" class="form-control" value="{{ transporter.bank_account if transporter else '' }}" placeholder="e.g. 12345678901">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">IFSC Code</label>
+                        <input type="text" name="ifsc_code" class="form-control" value="{{ transporter.ifsc_code if transporter else '' }}" placeholder="e.g. SBIN0001234">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Contact</label>
+                        <input type="text" name="contact" class="form-control" value="{{ transporter.contact if transporter else '' }}" placeholder="e.g. 9876543210">
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i> Save</button>
+                        <a href="{{ url_for('transporters.list') }}" class="btn btn-outline-secondary"><i class="bi bi-x me-1"></i> Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <div>
+        <h3>Dashboard</h3>
+        <div class="subtitle">Overview of all transport operations</div>
+    </div>
+    <span class="text-muted" style="font-size:0.78rem;"><i class="bi bi-calendar3 me-1"></i>{{ now.strftime('%d %b %Y') }}</span>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="dash-stat dash-stat-primary">
+            <div class="dash-stat-icon"><i class="bi bi-truck"></i></div>
+            <div class="dash-stat-body">
+                <div class="dash-stat-label">Total Freight</div>
+                <div class="dash-stat-value">&#8377; {{ "{:,.0f}".format(total_freight) }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="dash-stat dash-stat-success">
+            <div class="dash-stat-icon"><i class="bi bi-check-circle"></i></div>
+            <div class="dash-stat-body">
+                <div class="dash-stat-label">Total Received</div>
+                <div class="dash-stat-value">&#8377; {{ "{:,.0f}".format(total_paid) }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="dash-stat dash-stat-warning">
+            <div class="dash-stat-icon"><i class="bi bi-wallet2"></i></div>
+            <div class="dash-stat-body">
+                <div class="dash-stat-label">Balance Due</div>
+                <div class="dash-stat-value">&#8377; {{ "{:,.0f}".format(total_balance) }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="dash-stat dash-stat-info">
+            <div class="dash-stat-icon"><i class="bi bi-clipboard-data"></i></div>
+            <div class="dash-stat-body">
+                <div class="dash-stat-label">Work Orders</div>
+                <div class="dash-stat-value">{{ pending_wos }} <span class="dash-stat-sub">/ {{ total_wos|int }} pending</span></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if anomalies %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="section-title mb-0"><i class="bi bi-shield-exclamation"></i> AI Alerts</div>
+    <span class="badge bg-danger-subtle text-danger" style="font-size:0.7rem;">{{ anomalies|length }}</span>
+</div>
+<div class="mb-4" id="anomalyContainer">
+    {% for a in anomalies %}
+    <div class="dash-alert dash-alert-{{ a.severity }}" data-type="{{ a.type }}" onclick="dismissAlert(this)">
+        <div class="dash-alert-icon"><i class="bi {{ a.icon }}"></i></div>
+        <div class="dash-alert-body">
+            <div class="dash-alert-message">{{ a.message }}</div>
+        </div>
+        <button class="dash-alert-close" onclick="event.stopPropagation(); dismissAlert(this.closest('.dash-alert'))" title="Dismiss"><i class="bi bi-x"></i></button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if plant_data %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="section-title mb-0"><i class="bi bi-building"></i> Plant-wise Summary</div>
+    <span class="badge bg-primary-subtle text-primary" style="font-size:0.7rem;">{{ plant_data|length }} Plant{{ 's' if plant_data|length != 1 }}</span>
+</div>
+<div class="row g-3 mb-4">
+    {% for pd in plant_data %}
+    <div class="col-xl-4 col-md-6">
+        <a href="{{ url_for('mines.list', plant_id=pd.id) }}" class="text-decoration-none">
+            <div class="dash-plant-card">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="fw-bold" style="font-size:0.9rem; color:var(--text);"><i class="bi bi-geo-alt me-1 text-primary"></i>{{ pd.name }}</div>
+                    <span class="badge {% if pd.pending > 0 %}bg-warning-subtle text-warning{% else %}bg-success-subtle text-success{% endif %}" style="font-size:0.65rem;">{{ pd.pending }} pending</span>
+                </div>
+                <div class="row g-2 mt-1">
+                    <div class="col-4">
+                        <div class="dash-plant-metric">
+                            <div class="dash-plant-metric-label">Freight</div>
+                            <div class="dash-plant-metric-value">{{ "{:,.0f}".format(pd.freight) }}</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="dash-plant-metric">
+                            <div class="dash-plant-metric-label">Received</div>
+                            <div class="dash-plant-metric-value">{{ "{:,.0f}".format(pd.paid) }}</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="dash-plant-metric">
+                            <div class="dash-plant-metric-label">Balance</div>
+                            <div class="dash-plant-metric-value {% if pd.balance > 0 %}text-warning{% else %}text-success{% endif %}">{{ "{:,.0f}".format(pd.balance) }}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-2 pt-2" style="border-top:1px solid var(--border);">
+                    <span style="font-size:0.7rem; color:var(--text-muted);">{{ pd.count }} work orders</span>
+                    <i class="bi bi-arrow-right" style="font-size:0.7rem; color:var(--text-muted);"></i>
+                </div>
+            </div>
+        </a>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if recent_wos %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="section-title mb-0"><i class="bi bi-clock-history"></i> Recent Work Orders</div>
+</div>
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-sm mb-0">
+            <thead>
+                <tr class="table-secondary">
+                    <th>Date</th>
+                    <th>WO #</th>
+                    <th>Truck</th>
+                    <th>Mine</th>
+                    <th>Freight</th>
+                    <th>Balance</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for wo in recent_wos %}
+                <tr>
+                    <td>{{ wo.date.strftime('%d %b %Y') if wo.date else '-' }}</td>
+                    <td><a href="{{ url_for('work_order_records.view', id=wo.id) }}" class="text-decoration-none fw-bold">{{ wo.work_order_number or ('#' ~ wo.id) }}</a></td>
+                    <td><strong>{{ wo.lorry_number or '-' }}</strong></td>
+                    <td>{{ wo.mine.name if wo.mine else '-' }}</td>
+                    <td>&#8377; {{ "{:,.0f}".format(wo.total_freight or 0) }}</td>
+                    <td>
+                        {% set bal = wo.balance or 0 %}
+                        <span class="{% if bal > 0 %}text-warning fw-bold{% else %}text-success{% endif %}">&#8377; {{ "{:,.0f}".format(bal) }}</span>
+                    </td>
+                    <td>
+                        {% if wo.status == 'Completed' %}
+                        <span class="badge bg-success-subtle text-success">Completed</span>
+                        {% else %}
+                        <span class="badge bg-warning-subtle text-warning">Pending</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% if not recent_wos and not plant_data %}
+<div class="empty-state">
+    <div class="icon"><i class="bi bi-inbox"></i></div>
+    <p>No data available yet. Start by adding work orders.</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function dismissAlert(el) {
+    if (!el) return;
+    var type = el.dataset.type;
+    if (type) {
+        var dismissed = JSON.parse(localStorage.getItem('dismissed_alerts') || '[]');
+        if (dismissed.indexOf(type) === -1) {
+            dismissed.push(type);
+            localStorage.setItem('dismissed_alerts', JSON.stringify(dismissed));
+        }
+    }
+    el.classList.add('dismissing');
+    setTimeout(function() { el.remove(); }, 300);
+}
+document.addEventListener('DOMContentLoaded', function() {
+    var dismissed = JSON.parse(localStorage.getItem('dismissed_alerts') || '[]');
+    var alerts = document.querySelectorAll('.dash-alert');
+    alerts.forEach(function(alert) {
+        if (dismissed.indexOf(alert.dataset.type) !== -1) {
+            alert.remove();
+        }
+    });
+    var container = document.getElementById('anomalyContainer');
+    if (container && container.children.length === 0) {
+        var header = container.previousElementSibling;
+        if (header) header.remove();
+        container.remove();
+    }
+});
+</script>
+{% endblock %}

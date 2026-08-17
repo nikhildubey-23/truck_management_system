@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <div>
+        <h3><i class="bi bi-arrow-left-right me-1"></i> Bank Reconciliation</h3>
+        <div class="subtitle">Upload bank statement CSV to auto-match payments with work orders</div>
+    </div>
+    <a href="{{ url_for('work_order_records.daily_payments') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i> Daily Payments</a>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-upload me-1"></i> <strong>Upload Bank Statement</strong></div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('reconcile.preview') }}" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label class="form-label">Select Bank CSV File</label>
+                        <input type="file" name="bank_file" class="form-control" accept=".csv" required>
+                        <div class="form-text">Supported columns: Date, Description/Narration, Debit, Credit, Amount. All major bank formats work.</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-stars me-1"></i> AI Match & Preview</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-info-circle me-1"></i> <strong>How it Works</strong></div>
+            <div class="card-body" style="font-size:0.82rem; color:var(--text-secondary);">
+                <ol class="ps-3 mb-0">
+                    <li class="mb-2">Upload your bank's CSV statement</li>
+                    <li class="mb-2">AI reads credit entries (RTGS/NEFT received)</li>
+                    <li class="mb-2">Matches them against pending work order balances</li>
+                    <li class="mb-2">You review and confirm matches</li>
+                    <li class="mb-0">Confirmed entries auto-update RTGS and balance</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

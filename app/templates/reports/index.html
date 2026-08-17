@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <h3><i class="bi bi-bar-chart me-1"></i> Reports</h3>
+    <div class="subtitle">View and export operational summaries</div>
+</div>
+
+<div class="row g-4 mt-2">
+    <div class="col-md-3">
+        <a href="{{ url_for('reports.trip_wise') }}" class="text-decoration-none">
+            <div class="report-card">
+                <div class="icon"><i class="bi bi-journal-text"></i></div>
+                <h5>Trip-wise Summary</h5>
+                <p>View trips with date filters and export to CSV</p>
+                <span class="btn btn-primary btn-sm mt-2">View Report</span>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-3">
+        <a href="{{ url_for('reports.transporter_wise') }}" class="text-decoration-none">
+            <div class="report-card">
+                <div class="icon"><i class="bi bi-people"></i></div>
+                <h5>Transporter-wise Summary</h5>
+                <p>Consolidated view by transporter with CSV export</p>
+                <span class="btn btn-primary btn-sm mt-2">View Report</span>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-3">
+        <a href="{{ url_for('reports.plant_wise') }}" class="text-decoration-none">
+            <div class="report-card">
+                <div class="icon"><i class="bi bi-building"></i></div>
+                <h5>Plant-wise Summary</h5>
+                <p>Plant → Truck Work Order → Trip details with CSV export</p>
+                <span class="btn btn-primary btn-sm mt-2">View Report</span>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-3">
+        <a href="{{ url_for('reports.date_wise') }}" class="text-decoration-none">
+            <div class="report-card">
+                <div class="icon"><i class="bi bi-calendar"></i></div>
+                <h5>Date-wise Summary</h5>
+                <p>Daily aggregated report with CSV export</p>
+                <span class="btn btn-primary btn-sm mt-2">View Report</span>
+            </div>
+        </a>
+    </div>
+</div>
+{% endblock %}

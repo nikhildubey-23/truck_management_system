@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <div>
+        <h3><i class="bi bi-arrow-left-right me-1"></i> Reconciliation Results</h3>
+        <div class="subtitle">{{ total_entries }} credit entries scanned — {{ matched_count }} match{{ 'es' if matched_count != 1 }} found</div>
+    </div>
+    <a href="{{ url_for('reconcile.upload_form') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-upload me-1"></i> New Upload</a>
+</div>
+
+{% if results %}
+<form method="POST" action="{{ url_for('reconcile.confirm') }}">
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-check2-all me-1 text-success"></i> <strong>Matched Entries</strong> — Review and confirm</span>
+            <div class="d-flex gap-2 align-items-center">
+                <label class="form-label mb-0" style="font-size:0.78rem;"><strong>Select All</strong></label>
+                <input type="checkbox" class="form-check-input" onchange="toggleAll(this)" id="selectAll">
+                <button type="submit" class="btn btn-success btn-sm"><i class="bi bi-check-lg me-1"></i> Confirm Selected</button>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm mb-0">
+                <thead>
+                    <tr class="table-secondary">
+                        <th style="width:40px;"></th>
+                        <th>Bank Date</th>
+                        <th>Narration</th>
+                        <th>Amount</th>
+                        <th>→</th>
+                        <th>WO#</th>
+                        <th>Truck</th>
+                        <th>Mine</th>
+                        <th>WO Balance</th>
+                        <th>Confidence</th>
+                        <th>Reason</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in results %}
+                    <tr>
+                        <td><input type="checkbox" name="confirmed" value="bank_{{ loop.index0 }}" class="form-check-input reconcile-check" checked></td>
+                        <td>{{ r.bank_date }}</td>
+                        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ r.bank_narration }}">{{ r.bank_narration[:50] }}</td>
+                        <td><strong class="text-success">&#8377; {{ "{:,.0f}".format(r.bank_amount) }}</strong></td>
+                        <td><i class="bi bi-arrow-right text-primary"></i></td>
+                        <td>{{ r.wo_id }}</td>
+                        <td><strong>{{ r.wo_truck }}</strong></td>
+                        <td>{{ r.wo_mine }}</td>
+                        <td>&#8377; {{ "{:,.0f}".format(r.wo_balance) }}</td>
+                        <td>
+                            {% set conf = r.confidence %}
+                            {% if conf >= 0.9 %}
+                                <span class="badge bg-success-subtle text-success">{{ (conf * 100)|int }}%</span>
+                            {% elif conf >= 0.7 %}
+                                <span class="badge bg-warning-subtle text-warning">{{ (conf * 100)|int }}%</span>
+                            {% else %}
+                                <span class="badge bg-danger-subtle text-danger">{{ (conf * 100)|int }}%</span>
+                            {% endif %}
+                        </td>
+                        <td style="font-size:0.72rem; color:var(--text-muted); max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{{ r.reason }}">{{ r.reason[:60] }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</form>
+{% else %}
+<div class="card">
+    <div class="card-body text-center py-5">
+        <i class="bi bi-inbox" style="font-size:2rem; color:var(--text-muted);"></i>
+        <p class="mt-2 text-muted">No matches found. Try uploading a different CSV or check pending work orders.</p>
+        <a href="{{ url_for('reconcile.upload_form') }}" class="btn btn-primary btn-sm mt-2"><i class="bi bi-upload me-1"></i> Upload Again</a>
+    </div>
+</div>
+{% endif %}
+
+{% if unmatched_banks %}
+<div class="card mb-4">
+    <div class="card-header"><i class="bi bi-question-circle me-1 text-warning"></i> <strong>Unmatched Bank Entries</strong> — {{ unmatched_banks|length }}</div>
+    <div class="table-responsive">
+        <table class="table table-sm mb-0">
+            <thead>
+                <tr class="table-secondary">
+                    <th>Date</th>
+                    <th>Narration</th>
+                    <th>Credit</th>
+                    <th>Debit</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in unmatched_banks %}
+                <tr>
+                    <td>{{ u.date }}</td>
+                    <td>{{ u.narration[:80] }}</td>
+                    <td>{% if u.credit > 0 %}<span class="text-success">&#8377; {{ "{:,.0f}".format(u.credit) }}</span>{% else %}-{% endif %}</td>
+                    <td>{% if u.debit > 0 %}<span class="text-danger">&#8377; {{ "{:,.0f}".format(u.debit) }}</span>{% else %}-{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleAll(source) {
+    document.querySelectorAll('.reconcile-check').forEach(function(cb) {
+        cb.checked = source.checked;
+    });
+}
+</script>
+{% endblock %}
