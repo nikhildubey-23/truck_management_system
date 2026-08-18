@@ -43,7 +43,6 @@ PER_PAGE = 20
 @login_required
 def next_wo_number(mine_id):
     mine = Mine.query.get_or_404(mine_id)
-    prefix = mine.name[:3].upper()
     last_wo = (
         WorkOrder.query
         .filter(WorkOrder.mine_id == mine_id, WorkOrder.work_order_number.isnot(None))
@@ -52,13 +51,13 @@ def next_wo_number(mine_id):
     )
     if last_wo and last_wo.work_order_number:
         try:
-            last_num = int(last_wo.work_order_number.split("-")[-1])
+            last_num = int(last_wo.work_order_number)
         except (ValueError, IndexError):
             last_num = 0
         next_num = last_num + 1
     else:
         next_num = 1
-    return jsonify({"wo_number": f"{prefix}-{next_num:03d}"})
+    return jsonify({"wo_number": str(next_num)})
 
 
 @work_order_records_bp.route("/quick-add", methods=["POST"])
