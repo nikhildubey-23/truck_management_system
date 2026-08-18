@@ -37,12 +37,14 @@ def add():
             if Transporter.query.filter_by(name=name).first():
                 flash("Transporter with this name already exists", "danger")
                 return render_template("transporters/form.html", transporter=None)
+            tds_rate = float(request.form.get("tds_rate", 0) or 0)
             t = Transporter(
                 name=name,
                 pan_card=request.form.get("pan_card", "").strip(),
                 bank_account=request.form.get("bank_account", "").strip(),
                 ifsc_code=request.form.get("ifsc_code", "").strip(),
                 contact=request.form.get("contact", "").strip(),
+                tds_rate=tds_rate,
             )
             db.session.add(t)
             db.session.flush()
@@ -75,6 +77,7 @@ def edit(id):
             t.bank_account = request.form.get("bank_account", "").strip()
             t.ifsc_code = request.form.get("ifsc_code", "").strip()
             t.contact = request.form.get("contact", "").strip()
+            t.tds_rate = float(request.form.get("tds_rate", 0) or 0)
             log_audit("update", "transporter", t.id, f"Updated transporter: {t.name}")
             db.session.commit()
             flash("Transporter updated successfully", "success")
