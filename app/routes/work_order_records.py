@@ -114,7 +114,7 @@ def add_entry(parent_id):
 def work_orders():
     page = request.args.get("page", 1, type=int)
     mine_id = request.args.get("mine_id", "", type=str)
-    query = WorkOrder.query
+    query = WorkOrder.query.filter(WorkOrder.parent_id.is_(None))
     date_from = request.args.get("date_from", "")
     date_to = request.args.get("date_to", "")
     lorry = request.args.get("lorry", "")
@@ -161,7 +161,17 @@ def work_orders():
         db.joinedload(WorkOrder.mine).joinedload(Mine.plant),
         db.selectinload(WorkOrder.petrol_stations),
     )
-    all_work_orders = query.order_by(WorkOrder.mine_id.asc(), WorkOrder.date.desc()).all()
+    all_work_orders = query.order_by(WorkOrder.mine_id.asc(), WorkOrder.date.desc(), WorkOrder.id.desc()).all()
+
+    seen_wo_numbers = {}
+    deduped = []
+    for wo in all_work_orders:
+        key = (wo.mine_id, wo.work_order_number or str(wo.id))
+        if key in seen_wo_numbers:
+            continue
+        seen_wo_numbers[key] = True
+        deduped.append(wo)
+    all_work_orders = deduped
 
     mine_groups = {}
     for wo in all_work_orders:
@@ -304,6 +314,7 @@ def edit(id):
 def delete(id):
     wo = WorkOrder.query.get_or_404(id)
     try:
+        WorkOrder.query.filter_by(parent_id=wo.id).delete()
         PetrolStation.query.filter_by(work_order_id=wo.id).delete()
         db.session.delete(wo)
         log_audit("delete", "work_order", id, f"Deleted work order: {wo.lorry_number}")
@@ -562,6 +573,11 @@ def autosave(id):
         else:
             setattr(wo, field, str(value).strip() if value else None)
 
+        # Handle TDS manual override before recalculate
+        if field == "tds":
+            wo.tds = float(value or 0)
+            wo.tds_auto = False
+
         wo.recalculate()
         db.session.commit()
         print(f"[AUTOSAVE] WO#{wo.id} field={field} value={value} -> COMMITTED")
@@ -574,6 +590,8 @@ def autosave(id):
             "total_advance": float(wo.total_advance or 0),
             "shortage": float(wo.shortage or 0),
             "balance": float(wo.balance or 0),
+            "tds": float(wo.tds or 0),
+            "status": wo.status,
         })
     except Exception as e:
         print(f"[AUTOSAVE] ERROR WO#{wo.id if 'wo' in dir() else id} field={field} error={e}")
@@ -902,34 +920,59 @@ def import_execute():
                     db.session.flush()
                 mine_id = mine.id
 
-            wo = WorkOrder(
-                date=datetime.strptime(data.get("date", date_str), "%Y-%m-%d").date(),
-                lorry_number=data.get("lorry_number", lorry_number),
-                work_order_number=current_wo.work_order_number if current_wo else (data.get("work_order_number", None) or None),
-                mine_id=mine_id,
-                tds=float(data.get("tds", 0) or 0),
-                ddtds_from=datetime.strptime(data["ddtds_from"], "%Y-%m-%d").date() if data.get("ddtds_from", "").strip() else None,
-                ddtds_to=datetime.strptime(data["ddtds_to"], "%Y-%m-%d").date() if data.get("ddtds_to", "").strip() else None,
-                account_advance=float(data.get("account_advance", 0) or 0),
-                mines_qty=float(data.get("mines_qty", 0) or 0),
-                plant_qty=float(data.get("plant_qty", 0) or 0),
-                rate=float(data.get("rate", 0) or 0),
-                total_freight=0,
-                cash=float(data.get("cash", 0) or 0),
-                loading=float(data.get("loading", 0) or 0),
-                short_amt=float(data.get("short_amt", 0) or 0),
-                munsiyana=float(data.get("munsiyana", 300) or 300),
-                balance=0,
-                rtgs=float(data.get("rtgs", 0) or 0),
-                account_name=data.get("account_name", ""),
-                remark=data.get("remark", ""),
-            )
+            wo_number = current_wo.work_order_number if current_wo else (data.get("work_order_number", None) or None)
+            wo = None
+            if wo_number:
+                wo = WorkOrder.query.filter_by(work_order_number=wo_number).first()
+
+            if wo:
+                wo.date = datetime.strptime(data.get("date", date_str), "%Y-%m-%d").date()
+                wo.lorry_number = data.get("lorry_number", lorry_number)
+                wo.mine_id = mine_id or wo.mine_id
+                wo.tds = float(data.get("tds", 0) or 0)
+                wo.ddtds_from = datetime.strptime(data["ddtds_from"], "%Y-%m-%d").date() if data.get("ddtds_from", "").strip() else None
+                wo.ddtds_to = datetime.strptime(data["ddtds_to"], "%Y-%m-%d").date() if data.get("ddtds_to", "").strip() else None
+                wo.account_advance = float(data.get("account_advance", 0) or 0)
+                wo.mines_qty = float(data.get("mines_qty", 0) or 0)
+                wo.plant_qty = float(data.get("plant_qty", 0) or 0)
+                wo.rate = float(data.get("rate", 0) or 0)
+                wo.cash = float(data.get("cash", 0) or 0)
+                wo.loading = float(data.get("loading", 0) or 0)
+                wo.short_amt = float(data.get("short_amt", 0) or 0)
+                wo.munsiyana = float(data.get("munsiyana", 300) or 300)
+                wo.rtgs = float(data.get("rtgs", 0) or 0)
+                wo.account_name = data.get("account_name", "")
+                wo.remark = data.get("remark", "")
+            else:
+                wo = WorkOrder(
+                    date=datetime.strptime(data.get("date", date_str), "%Y-%m-%d").date(),
+                    lorry_number=data.get("lorry_number", lorry_number),
+                    work_order_number=wo_number,
+                    mine_id=mine_id,
+                    tds=float(data.get("tds", 0) or 0),
+                    ddtds_from=datetime.strptime(data["ddtds_from"], "%Y-%m-%d").date() if data.get("ddtds_from", "").strip() else None,
+                    ddtds_to=datetime.strptime(data["ddtds_to"], "%Y-%m-%d").date() if data.get("ddtds_to", "").strip() else None,
+                    account_advance=float(data.get("account_advance", 0) or 0),
+                    mines_qty=float(data.get("mines_qty", 0) or 0),
+                    plant_qty=float(data.get("plant_qty", 0) or 0),
+                    rate=float(data.get("rate", 0) or 0),
+                    total_freight=0,
+                    cash=float(data.get("cash", 0) or 0),
+                    loading=float(data.get("loading", 0) or 0),
+                    short_amt=float(data.get("short_amt", 0) or 0),
+                    munsiyana=float(data.get("munsiyana", 300) or 300),
+                    balance=0,
+                    rtgs=float(data.get("rtgs", 0) or 0),
+                    account_name=data.get("account_name", ""),
+                    remark=data.get("remark", ""),
+                )
+                db.session.add(wo)
             wo.recalculate()
-            db.session.add(wo)
             db.session.flush()
 
             petrol_raw = data.get("petrol", "")
             if petrol_raw:
+                PetrolStation.query.filter_by(work_order_id=wo.id).delete()
                 for part in petrol_raw.split(","):
                     part = part.strip()
                     if ":" in part:
