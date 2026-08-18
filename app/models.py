@@ -191,11 +191,14 @@ class WorkOrder(db.Model):
     __tablename__ = "work_orders"
     id = db.Column(db.Integer, primary_key=True)
     work_order_number = db.Column(db.String(50), nullable=True, index=True)
+    parent_id = db.Column(db.Integer, db.ForeignKey("work_orders.id"), nullable=True, index=True)
     date = db.Column(db.Date, nullable=False, index=True)
     lorry_number = db.Column(db.String(50), nullable=False, index=True)
     mine_id = db.Column(db.Integer, db.ForeignKey("mines.id"), nullable=True, index=True)
     tds = db.Column(db.Numeric(12, 2), nullable=False, default=0.00)
     ddtds = db.Column(db.Date, nullable=True)
+    ddtds_from = db.Column(db.Date, nullable=True)
+    ddtds_to = db.Column(db.Date, nullable=True)
     account_advance = db.Column(db.Numeric(12, 2), nullable=False, default=0.00)
     mines_qty = db.Column(db.Numeric(12, 2), nullable=True, default=0.00)
     plant_qty = db.Column(db.Numeric(12, 2), nullable=True, default=0.00)
@@ -217,16 +220,17 @@ class WorkOrder(db.Model):
 
     mine = db.relationship("Mine", backref="work_orders")
     petrol_stations = db.relationship("PetrolStation", backref="work_order", lazy=True, cascade="all, delete-orphan")
+    parent = db.relationship("WorkOrder", remote_side=[id], backref="children")
 
     def recalculate(self):
         self.total_freight = round(float(self.mines_qty or 0) * float(self.rate or 0), 2)
+        self.shortage = round(float(self.mines_qty or 0) - float(self.plant_qty or 0), 2)
+        petrol_total = sum(float(ps.amount or 0) for ps in self.petrol_stations)
+        self.total_advance = round(float(self.cash or 0) + petrol_total + float(self.loading or 0), 2)
         deductions = (
-            float(self.cash or 0)
-            + float(self.loading or 0)
-            + float(self.total_advance or 0)
-            + float(self.shortage or 0)
+            float(self.total_advance or 0)
             + float(self.short_amt or 0)
-            + float(self.munsiyana or 0)
+            + float(self.munsiyana or 300)
             + float(self.rtgs or 0)
             + float(self.tds or 0)
             + float(self.account_advance or 0)

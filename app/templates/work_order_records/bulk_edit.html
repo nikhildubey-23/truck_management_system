@@ -62,7 +62,8 @@
                     <th>Truck</th>
                     <th>Mine</th>
                     <th>TDS</th>
-                    <th>DD TDS Date</th>
+                    <th>DD TDS From</th>
+                    <th>DD TDS To</th>
                     <th>Acc Adv</th>
                     <th>Qty</th>
                     <th>Rate</th>
@@ -87,7 +88,8 @@
                     <td>{{ wo.lorry_number }}</td>
                     <td>{{ wo.mine.name if wo.mine else '-' }}</td>
                     <td>{{ "%.0f"|format(wo.tds) }}</td>
-                    <td>{{ wo.ddtds.isoformat() if wo.ddtds else '-' }}</td>
+                    <td>{{ wo.ddtds_from.isoformat() if wo.ddtds_from else '-' }}</td>
+                    <td>{{ wo.ddtds_to.isoformat() if wo.ddtds_to else '-' }}</td>
                     <td>{{ "%.0f"|format(wo.account_advance) }}</td>
                     <td>{{ "%.1f"|format(wo.mines_qty) if wo.mines_qty else '-' }}</td>
                     <td>{{ "%.0f"|format(wo.rate) }}</td>

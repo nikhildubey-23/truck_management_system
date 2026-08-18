@@ -1,4 +1,4 @@
-import csv, io, os, json
+import csv, io, os, json, logging
 import requests
 from datetime import datetime
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, Response
@@ -12,27 +12,101 @@ work_order_fields = [
     ("lorry_number", "Truck #", "text"),
     ("work_order_number", "WO Number", "text"),
     ("mine_name", "Mine Name", "text"),
-    ("account_name", "Account Name", "text"),
-    ("remark", "Remark", "text"),
     ("tds", "TDS", "number"),
-    ("ddtds", "DD TDS Date", "date"),
+    ("ddtds_from", "DD TDS From", "date"),
+    ("ddtds_to", "DD TDS To", "date"),
     ("account_advance", "Acc Adv", "number"),
     ("mines_qty", "Mines Qty", "number"),
     ("plant_qty", "Plant Qty", "number"),
     ("rate", "Rate", "number"),
+    ("total_freight", "Freight", "computed"),
     ("cash", "Cash", "number"),
     ("loading", "Loading", "number"),
-    ("total_advance", "Total Advance", "number"),
-    ("shortage", "Shortage", "number"),
+    ("petrol", "Petrol", "text"),
+    ("total_advance", "Advance", "computed"),
+    ("shortage", "Short", "computed"),
     ("short_amt", "Short Amt", "number"),
     ("munsiyana", "Munsiyana", "number"),
     ("rtgs", "RTGS", "number"),
-    ("petrol", "Petrol (Name:Amt,...)", "text"),
+    ("balance", "Balance", "computed"),
+    ("status", "Status", "text"),
+    ("remark", "Remark", "text"),
+    ("account_name", "Account Name", "text"),
 ]
 
 work_order_records_bp = Blueprint("work_order_records", __name__, url_prefix="/work-orders")
 
 PER_PAGE = 20
+
+
+@work_order_records_bp.route("/next-wo-number/<int:mine_id>")
+@login_required
+def next_wo_number(mine_id):
+    mine = Mine.query.get_or_404(mine_id)
+    prefix = mine.name[:3].upper()
+    last_wo = (
+        WorkOrder.query
+        .filter(WorkOrder.mine_id == mine_id, WorkOrder.work_order_number.isnot(None))
+        .order_by(WorkOrder.id.desc())
+        .first()
+    )
+    if last_wo and last_wo.work_order_number:
+        try:
+            last_num = int(last_wo.work_order_number.split("-")[-1])
+        except (ValueError, IndexError):
+            last_num = 0
+        next_num = last_num + 1
+    else:
+        next_num = 1
+    return jsonify({"wo_number": f"{prefix}-{next_num:03d}"})
+
+
+@work_order_records_bp.route("/quick-add", methods=["POST"])
+@login_required
+def quick_add():
+    data = request.get_json()
+    mine_id = data.get("mine_id")
+    work_order_number = data.get("work_order_number", "").strip()
+    if not mine_id:
+        return jsonify({"ok": False, "error": "Mine is required"}), 400
+    try:
+        wo = WorkOrder(
+            work_order_number=work_order_number or None,
+            mine_id=int(mine_id),
+            date=datetime.utcnow().date(),
+            lorry_number="-",
+        )
+        wo.recalculate()
+        db.session.add(wo)
+        db.session.flush()
+        log_audit("create", "work_order", wo.id, f"Quick created work order: {wo.work_order_number}")
+        db.session.commit()
+        return jsonify({"ok": True, "id": wo.id, "work_order_number": wo.work_order_number})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@work_order_records_bp.route("/add-entry/<int:parent_id>", methods=["POST"])
+@login_required
+def add_entry(parent_id):
+    parent = WorkOrder.query.get_or_404(parent_id)
+    try:
+        entry = WorkOrder(
+            parent_id=parent.id,
+            work_order_number=parent.work_order_number,
+            mine_id=parent.mine_id,
+            date=datetime.utcnow().date(),
+            lorry_number="-",
+        )
+        entry.recalculate()
+        db.session.add(entry)
+        db.session.flush()
+        db.session.commit()
+        return jsonify({"ok": True, "id": entry.id})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"ok": False, "error": str(e)}), 500
 
 
 @work_order_records_bp.route("/")
@@ -61,22 +135,23 @@ def work_orders():
 
     if request.args.get("export") == "csv":
         all_work_orders = query.order_by(WorkOrder.date.desc()).all()
-        headers = ["WO #", "Date", "Truck", "Mine", "Account", "TDS", "DD TDS Date", "Acc Adv", "Mines Qty", "Plant Qty", "Rate", "Freight", "Cash", "Loading", "Advance", "Shortage", "Short Amt", "Munsiyana", "RTGS", "Balance", "Status", "Remark"]
+        headers = ["WO #", "Date", "Truck", "Mine", "TDS", "DD TDS From", "DD TDS To", "Acc Adv", "Mines Qty", "Plant Qty", "Rate", "Freight", "Cash", "Loading", "Petrol", "Advance", "Short", "Short Amt", "Munsiyana", "RTGS", "Balance", "Status", "Remark", "Account"]
         rows = [
             [
                 wo.work_order_number or "",
                 wo.date,
                 wo.lorry_number,
                 wo.mine.name if wo.mine else "",
-                wo.account_name or "",
-                float(wo.tds), wo.ddtds.isoformat() if wo.ddtds else "", float(wo.account_advance),
+                float(wo.tds or 0), wo.ddtds_from.isoformat() if wo.ddtds_from else "", wo.ddtds_to.isoformat() if wo.ddtds_to else "", float(wo.account_advance or 0),
                 float(wo.mines_qty) if wo.mines_qty else "",
                 float(wo.plant_qty) if wo.plant_qty else "",
-                float(wo.rate), float(wo.total_freight),
-                float(wo.cash), float(wo.loading), float(wo.total_advance),
-                float(wo.shortage) if wo.shortage else "",
-                float(wo.short_amt), float(wo.munsiyana), float(wo.rtgs),
-                float(wo.balance), wo.status, wo.remark or "",
+                float(wo.rate or 0), float(wo.total_freight or 0),
+                float(wo.cash or 0), float(wo.loading or 0),
+                sum(float(ps.amount or 0) for ps in wo.petrol_stations),
+                float(wo.total_advance or 0),
+                float(wo.shortage or 0),
+                float(wo.short_amt or 0), float(wo.munsiyana or 300), float(wo.rtgs or 0),
+                float(wo.balance or 0), wo.status, wo.remark or "", wo.account_name or "",
             ]
             for wo in all_work_orders
         ]
@@ -129,57 +204,40 @@ def add():
     mines = Mine.query.order_by(Mine.name).all()
     if request.method == "POST":
         try:
-            date_str = request.form.get("date", "").strip()
-            lorry_number = request.form.get("lorry_number", "").strip()
-            if not date_str or not lorry_number:
-                flash("Date and Lorry Number are required", "danger")
+            work_order_number = request.form.get("work_order_number", "").strip()
+            mine_id = request.form.get("mine_id")
+            if not work_order_number or not mine_id:
+                flash("Work Order Number and Mine are required", "danger")
                 return render_template("work_order_records/form.html", work_order=None, mines=mines)
 
             wo = WorkOrder(
-                date=datetime.strptime(date_str, "%Y-%m-%d").date(),
-                lorry_number=lorry_number,
-                work_order_number=request.form.get("work_order_number", "").strip() or None,
-                mine_id=int(request.form.get("mine_id")) if request.form.get("mine_id") else None,
-                tds=float(request.form.get("tds", 0) or 0),
-                ddtds=datetime.strptime(request.form.get("ddtds", "").strip(), "%Y-%m-%d").date() if request.form.get("ddtds", "").strip() else None,
-                account_advance=float(request.form.get("account_advance", 0) or 0),
-                mines_qty=float(request.form.get("mines_qty", 0) or 0),
-                plant_qty=float(request.form.get("plant_qty", 0) or 0),
-                rate=float(request.form.get("rate", 0) or 0),
+                work_order_number=work_order_number,
+                mine_id=int(mine_id),
+                date=datetime.utcnow().date(),
+                lorry_number="-",
+                tds=0,
+                account_advance=0,
+                mines_qty=0,
+                plant_qty=0,
+                rate=0,
                 total_freight=0,
-                cash=float(request.form.get("cash", 0) or 0),
-                loading=float(request.form.get("loading", 0) or 0),
-                total_advance=float(request.form.get("total_advance", 0) or 0),
-                shortage=float(request.form.get("shortage", 0) or 0),
-                short_amt=float(request.form.get("short_amt", 0) or 0),
-                munsiyana=float(request.form.get("munsiyana", 0) or 0),
+                cash=0,
+                loading=0,
+                total_advance=0,
+                shortage=0,
+                short_amt=0,
+                munsiyana=300,
                 balance=0,
-                rtgs=float(request.form.get("rtgs", 0) or 0),
-                account_name=request.form.get("account_name", "").strip(),
-                remark=request.form.get("remark", "").strip(),
+                rtgs=0,
+                account_name="",
+                remark="",
             )
             wo.recalculate()
             db.session.add(wo)
             db.session.flush()
-
-            petrol_names = request.form.getlist("petrol_name[]")
-            petrol_amounts = request.form.getlist("petrol_amount[]")
-            for i, pname in enumerate(petrol_names):
-                pname = pname.strip()
-                if pname:
-                    amt = float(petrol_amounts[i]) if i < len(petrol_amounts) and petrol_amounts[i] else 0
-                    db.session.add(PetrolStation(work_order_id=wo.id, name=pname, amount=amt))
-
-            db.session.flush()
-            log_audit("create", "work_order", wo.id, f"Created work order: {wo.lorry_number} on {wo.date}")
+            log_audit("create", "work_order", wo.id, f"Created work order: {wo.work_order_number}")
             db.session.commit()
             flash("Work order added successfully", "success")
-            next_url = request.form.get("next", "")
-            if next_url:
-                return redirect(next_url)
-            mine_id = request.form.get("mine_id", "")
-            if mine_id:
-                return redirect(url_for("mines.view", id=int(mine_id)))
             return redirect(url_for("work_order_records.work_orders"))
         except Exception as e:
             db.session.rollback()
@@ -205,7 +263,8 @@ def edit(id):
             wo.work_order_number = request.form.get("work_order_number", "").strip() or None
             wo.mine_id = int(request.form.get("mine_id")) if request.form.get("mine_id") else None
             wo.tds = float(request.form.get("tds", 0) or 0)
-            wo.ddtds = datetime.strptime(request.form.get("ddtds", "").strip(), "%Y-%m-%d").date() if request.form.get("ddtds", "").strip() else None
+            wo.ddtds_from = datetime.strptime(request.form.get("ddtds_from", "").strip(), "%Y-%m-%d").date() if request.form.get("ddtds_from", "").strip() else None
+            wo.ddtds_to = datetime.strptime(request.form.get("ddtds_to", "").strip(), "%Y-%m-%d").date() if request.form.get("ddtds_to", "").strip() else None
             wo.account_advance = float(request.form.get("account_advance", 0) or 0)
             wo.mines_qty = float(request.form.get("mines_qty", 0) or 0)
             wo.plant_qty = float(request.form.get("plant_qty", 0) or 0)
@@ -259,15 +318,14 @@ def delete(id):
 EDITABLE_FIELDS = {
     "work_order_number": "WO Number",
     "tds": "TDS",
-    "ddtds": "DD TDS Date",
+    "ddtds_from": "DD TDS From",
+    "ddtds_to": "DD TDS To",
     "account_advance": "Account Advance",
     "mines_qty": "Mines Qty",
     "plant_qty": "Plant Qty",
     "rate": "Rate",
     "cash": "Cash",
     "loading": "Loading",
-    "total_advance": "Total Advance",
-    "shortage": "Shortage",
     "short_amt": "Short Amt",
     "munsiyana": "Munsiyana",
     "rtgs": "RTGS",
@@ -293,9 +351,11 @@ def bulk_edit():
                 wo = WorkOrder.query.get(int(wid))
                 if not wo:
                     continue
-                if field == "ddtds":
-                    wo.ddtds = datetime.strptime(value, "%Y-%m-%d").date() if value else None
-                elif field in ("tds", "account_advance", "mines_qty", "plant_qty", "rate", "cash", "loading", "total_advance", "shortage", "short_amt", "munsiyana", "rtgs"):
+                if field == "ddtds_from":
+                    wo.ddtds_from = datetime.strptime(value, "%Y-%m-%d").date() if value else None
+                elif field == "ddtds_to":
+                    wo.ddtds_to = datetime.strptime(value, "%Y-%m-%d").date() if value else None
+                elif field in ("tds", "account_advance", "mines_qty", "plant_qty", "rate", "cash", "loading", "short_amt", "munsiyana", "rtgs"):
                     setattr(wo, field, float(value or 0))
                     wo.recalculate()
                 elif field in ("work_order_number", "account_name", "remark", "status"):
@@ -338,26 +398,28 @@ def bulk_edit():
 @login_required
 def view(id):
     current_wo = WorkOrder.query.get_or_404(id)
-    work_orders = WorkOrder.query.order_by(WorkOrder.date.desc(), WorkOrder.id.desc()).all()
+    work_orders = WorkOrder.query.filter(
+        db.or_(WorkOrder.id == id, WorkOrder.parent_id == id)
+    ).order_by(WorkOrder.id.asc()).all()
 
     if request.args.get("export") == "csv":
-        headers = ["WO #", "Date", "Truck", "Mine", "Account", "Remark", "TDS", "DD TDS Date", "Acc Adv", "Mines Qty", "Plant Qty", "Rate", "Freight", "Cash", "Loading", "Advance", "Shortage", "Short Amt", "Munsiyana", "RTGS", "Balance", "Status"]
+        headers = ["WO #", "Date", "Truck", "Mine", "TDS", "DD TDS From", "DD TDS To", "Acc Adv", "Mines Qty", "Plant Qty", "Rate", "Freight", "Cash", "Loading", "Petrol", "Advance", "Short", "Short Amt", "Munsiyana", "RTGS", "Balance", "Status", "Remark", "Account"]
         rows = [
             [
                 wo.work_order_number or "",
                 wo.date,
                 wo.lorry_number,
                 wo.mine.name if wo.mine else "",
-                wo.account_name or "",
-                wo.remark or "",
-                float(wo.tds), wo.ddtds.isoformat() if wo.ddtds else "", float(wo.account_advance),
+                float(wo.tds or 0), wo.ddtds_from.isoformat() if wo.ddtds_from else "", wo.ddtds_to.isoformat() if wo.ddtds_to else "", float(wo.account_advance or 0),
                 float(wo.mines_qty) if wo.mines_qty else "",
                 float(wo.plant_qty) if wo.plant_qty else "",
-                float(wo.rate), float(wo.total_freight),
-                float(wo.cash), float(wo.loading), float(wo.total_advance),
-                float(wo.shortage) if wo.shortage else "",
-                float(wo.short_amt), float(wo.munsiyana), float(wo.rtgs),
-                float(wo.balance), wo.status,
+                float(wo.rate or 0), float(wo.total_freight or 0),
+                float(wo.cash or 0), float(wo.loading or 0),
+                sum(float(ps.amount or 0) for ps in wo.petrol_stations),
+                float(wo.total_advance or 0),
+                float(wo.shortage or 0),
+                float(wo.short_amt or 0), float(wo.munsiyana or 300), float(wo.rtgs or 0),
+                float(wo.balance or 0), wo.status, wo.remark or "", wo.account_name or "",
             ]
             for wo in work_orders
         ]
@@ -368,13 +430,110 @@ def view(id):
     return render_template("work_order_records/view.html", wo=current_wo, work_orders=work_orders, current_wo=current_wo, mines=mines, mines_json=mines_json)
 
 
-@work_order_records_bp.route("/autosave/<int:id>", methods=["POST"])
+@work_order_records_bp.route("/save/<int:id>", methods=["POST"])
 @login_required
-def autosave(id):
+def save_wo(id):
     wo = WorkOrder.query.get_or_404(id)
     data = request.get_json()
     if not data:
         return jsonify({"ok": False, "error": "No data"}), 400
+
+    editable = {
+        "date": "date", "lorry_number": "text", "work_order_number": "text",
+        "account_name": "text", "remark": "text", "status": "text",
+        "tds": "number", "account_advance": "number", "mines_qty": "number",
+        "plant_qty": "number", "rate": "number", "cash": "number",
+        "loading": "number",
+        "short_amt": "number", "munsiyana": "number", "rtgs": "number",
+        "mine_id": "select", "ddtds_from": "date", "ddtds_to": "date",
+    }
+
+    try:
+        for field, value in data.items():
+            if field not in editable:
+                continue
+            ftype = editable[field]
+            if ftype == "date":
+                setattr(wo, field, datetime.strptime(value, "%Y-%m-%d").date() if value else None)
+            elif ftype == "number":
+                setattr(wo, field, float(value or 0))
+            elif ftype == "select":
+                setattr(wo, field, int(value) if value else None)
+            else:
+                setattr(wo, field, str(value).strip() if value else None)
+
+        wo.recalculate()
+        db.session.commit()
+        return jsonify({
+            "ok": True,
+            "total_freight": float(wo.total_freight or 0),
+            "total_advance": float(wo.total_advance or 0),
+            "shortage": float(wo.shortage or 0),
+            "balance": float(wo.balance or 0),
+            "status": wo.status,
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@work_order_records_bp.route("/save-new", methods=["POST"])
+@login_required
+def save_new_rows():
+    rows = request.get_json()
+    if not rows or not isinstance(rows, list):
+        return jsonify({"ok": False, "error": "No data"}), 400
+
+    editable = {
+        "date": "date", "lorry_number": "text", "work_order_number": "text",
+        "account_name": "text", "remark": "text", "status": "text",
+        "tds": "number", "account_advance": "number", "mines_qty": "number",
+        "plant_qty": "number", "rate": "number", "cash": "number",
+        "loading": "number",
+        "short_amt": "number", "munsiyana": "number", "rtgs": "number",
+        "mine_id": "select", "ddtds_from": "date", "ddtds_to": "date",
+    }
+
+    ids = []
+    try:
+        for data in rows:
+            wo = WorkOrder()
+            for field, value in data.items():
+                if field not in editable:
+                    continue
+                ftype = editable[field]
+                if ftype == "date":
+                    setattr(wo, field, datetime.strptime(value, "%Y-%m-%d").date() if value else datetime.utcnow().date())
+                elif ftype == "number":
+                    setattr(wo, field, float(value or 0))
+                elif ftype == "select":
+                    setattr(wo, field, int(value) if value else None)
+                else:
+                    setattr(wo, field, str(value).strip() if value else None)
+            if not wo.date:
+                wo.date = datetime.utcnow().date()
+            if not wo.lorry_number:
+                wo.lorry_number = "-"
+            db.session.add(wo)
+            db.session.flush()
+            wo.recalculate()
+            ids.append(wo.id)
+        db.session.commit()
+        return jsonify({"ok": True, "ids": ids})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@work_order_records_bp.route("/autosave/<int:id>", methods=["POST"])
+@login_required
+def autosave(id):
+    data = request.get_json()
+    if not data:
+        return jsonify({"ok": False, "error": "No data"}), 400
+
+    wo_id = int(data.get("wo_id", id))
+    wo = WorkOrder.query.get_or_404(wo_id)
 
     field = data.get("field", "")
     value = data.get("value")
@@ -384,9 +543,9 @@ def autosave(id):
         "account_name": "text", "remark": "text", "status": "text",
         "tds": "number", "account_advance": "number", "mines_qty": "number",
         "plant_qty": "number", "rate": "number", "cash": "number",
-        "loading": "number", "total_advance": "number", "shortage": "number",
+        "loading": "number",
         "short_amt": "number", "munsiyana": "number", "rtgs": "number",
-        "mine_id": "select", "ddtds": "date",
+        "mine_id": "select", "ddtds_from": "date", "ddtds_to": "date",
     }
 
     if field not in editable:
@@ -405,17 +564,74 @@ def autosave(id):
 
         wo.recalculate()
         db.session.commit()
+        print(f"[AUTOSAVE] WO#{wo.id} field={field} value={value} -> COMMITTED")
 
         return jsonify({
             "ok": True,
             "field": field,
             "value": value,
             "total_freight": float(wo.total_freight or 0),
+            "total_advance": float(wo.total_advance or 0),
+            "shortage": float(wo.shortage or 0),
             "balance": float(wo.balance or 0),
         })
     except Exception as e:
+        print(f"[AUTOSAVE] ERROR WO#{wo.id if 'wo' in dir() else id} field={field} error={e}")
         db.session.rollback()
         return jsonify({"ok": False, "error": str(e)}), 400
+
+
+@work_order_records_bp.route("/petrol/list/<int:wo_id>")
+@login_required
+def petrol_list(wo_id):
+    wo = WorkOrder.query.get_or_404(wo_id)
+    stations = [{"id": ps.id, "name": ps.name, "amount": float(ps.amount or 0)} for ps in wo.petrol_stations]
+    return jsonify({"ok": True, "stations": stations})
+
+
+@work_order_records_bp.route("/petrol/add", methods=["POST"])
+@login_required
+def petrol_add():
+    data = request.get_json()
+    wo_id = data.get("work_order_id")
+    name = (data.get("value") or "").strip()
+    if not wo_id or not name:
+        return jsonify({"ok": False, "error": "Missing data"}), 400
+    try:
+        ps = PetrolStation(work_order_id=int(wo_id), name=name, amount=0)
+        db.session.add(ps)
+        db.session.commit()
+        return jsonify({"ok": True, "ps_id": ps.id})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@work_order_records_bp.route("/petrol/<int:ps_id>", methods=["POST", "DELETE"])
+@login_required
+def petrol_update(ps_id):
+    ps = PetrolStation.query.get_or_404(ps_id)
+    if request.method == "DELETE":
+        try:
+            db.session.delete(ps)
+            db.session.commit()
+            return jsonify({"ok": True})
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"ok": False, "error": str(e)}), 500
+    data = request.get_json()
+    field = data.get("field")
+    value = data.get("value")
+    try:
+        if field == "name":
+            ps.name = str(value).strip()
+        elif field == "amount":
+            ps.amount = float(value or 0)
+        db.session.commit()
+        return jsonify({"ok": True, "ps_id": ps.id})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"ok": False, "error": str(e)}), 500
 
 
 @work_order_records_bp.route("/view/<int:id>/add-rows", methods=["POST"])
@@ -435,7 +651,8 @@ def add_rows(id):
     lorry_numbers = request.form.getlist("lorry_number[]")
     mine_ids = request.form.getlist("mine_id[]")
     tds_list = request.form.getlist("tds[]")
-    ddtds_list = request.form.getlist("ddtds[]")
+    ddtds_from_list = request.form.getlist("ddtds_from[]")
+    ddtds_to_list = request.form.getlist("ddtds_to[]")
     account_advance_list = request.form.getlist("account_advance[]")
     mines_qty_list = request.form.getlist("mines_qty[]")
     plant_qty_list = request.form.getlist("plant_qty[]")
@@ -465,7 +682,8 @@ def add_rows(id):
                 work_order_number=wo_number,
                 mine_id=int(mine_ids[i]) if i < len(mine_ids) and mine_ids[i] else None,
                 tds=float(tds_list[i] or 0) if i < len(tds_list) else 0,
-                ddtds=datetime.strptime(ddtds_list[i].strip(), "%Y-%m-%d").date() if i < len(ddtds_list) and ddtds_list[i].strip() else None,
+                ddtds_from=datetime.strptime(ddtds_from_list[i].strip(), "%Y-%m-%d").date() if i < len(ddtds_from_list) and ddtds_from_list[i].strip() else None,
+                ddtds_to=datetime.strptime(ddtds_to_list[i].strip(), "%Y-%m-%d").date() if i < len(ddtds_to_list) and ddtds_to_list[i].strip() else None,
                 account_advance=float(account_advance_list[i] or 0) if i < len(account_advance_list) else 0,
                 mines_qty=float(mines_qty_list[i] or 0) if i < len(mines_qty_list) else 0,
                 plant_qty=float(plant_qty_list[i] or 0) if i < len(plant_qty_list) else 0,
@@ -473,10 +691,8 @@ def add_rows(id):
                 total_freight=0,
                 cash=float(cash_list[i] or 0) if i < len(cash_list) else 0,
                 loading=float(loading_list[i] or 0) if i < len(loading_list) else 0,
-                total_advance=float(total_advance_list[i] or 0) if i < len(total_advance_list) else 0,
-                shortage=float(shortage_list[i] or 0) if i < len(shortage_list) else 0,
                 short_amt=float(short_amt_list[i] or 0) if i < len(short_amt_list) else 0,
-                munsiyana=float(munsiyana_list[i] or 0) if i < len(munsiyana_list) else 0,
+                munsiyana=float(munsiyana_list[i] or 0) if i < len(munsiyana_list) else 300,
                 balance=0,
                 rtgs=float(rtgs_list[i] or 0) if i < len(rtgs_list) else 0,
                 account_name=account_name_list[i].strip() if i < len(account_name_list) else "",
@@ -515,22 +731,26 @@ work_order_fields = [
     ("lorry_number", "Truck #", "text"),
     ("work_order_number", "WO Number", "text"),
     ("mine_name", "Mine Name", "text"),
-    ("account_name", "Account Name", "text"),
-    ("remark", "Remark", "text"),
     ("tds", "TDS", "number"),
-    ("ddtds", "DD TDS Date", "date"),
+    ("ddtds_from", "DD TDS From", "date"),
+    ("ddtds_to", "DD TDS To", "date"),
     ("account_advance", "Acc Adv", "number"),
     ("mines_qty", "Mines Qty", "number"),
     ("plant_qty", "Plant Qty", "number"),
     ("rate", "Rate", "number"),
+    ("total_freight", "Freight", "computed"),
     ("cash", "Cash", "number"),
     ("loading", "Loading", "number"),
-    ("total_advance", "Total Advance", "number"),
-    ("shortage", "Shortage", "number"),
+    ("petrol", "Petrol", "text"),
+    ("total_advance", "Advance", "computed"),
+    ("shortage", "Short", "computed"),
     ("short_amt", "Short Amt", "number"),
     ("munsiyana", "Munsiyana", "number"),
     ("rtgs", "RTGS", "number"),
-    ("petrol", "Petrol (Name:Amt,...)", "text"),
+    ("balance", "Balance", "computed"),
+    ("status", "Status", "text"),
+    ("remark", "Remark", "text"),
+    ("account_name", "Account Name", "text"),
 ]
 
 @work_order_records_bp.route("/import", methods=["GET", "POST"])
@@ -688,7 +908,8 @@ def import_execute():
                 work_order_number=current_wo.work_order_number if current_wo else (data.get("work_order_number", None) or None),
                 mine_id=mine_id,
                 tds=float(data.get("tds", 0) or 0),
-                ddtds=datetime.strptime(data["ddtds"], "%Y-%m-%d").date() if data.get("ddtds", "").strip() else None,
+                ddtds_from=datetime.strptime(data["ddtds_from"], "%Y-%m-%d").date() if data.get("ddtds_from", "").strip() else None,
+                ddtds_to=datetime.strptime(data["ddtds_to"], "%Y-%m-%d").date() if data.get("ddtds_to", "").strip() else None,
                 account_advance=float(data.get("account_advance", 0) or 0),
                 mines_qty=float(data.get("mines_qty", 0) or 0),
                 plant_qty=float(data.get("plant_qty", 0) or 0),
@@ -696,10 +917,8 @@ def import_execute():
                 total_freight=0,
                 cash=float(data.get("cash", 0) or 0),
                 loading=float(data.get("loading", 0) or 0),
-                total_advance=float(data.get("total_advance", 0) or 0),
-                shortage=float(data.get("shortage", 0) or 0),
                 short_amt=float(data.get("short_amt", 0) or 0),
-                munsiyana=float(data.get("munsiyana", 0) or 0),
+                munsiyana=float(data.get("munsiyana", 300) or 300),
                 balance=0,
                 rtgs=float(data.get("rtgs", 0) or 0),
                 account_name=data.get("account_name", ""),
@@ -792,7 +1011,8 @@ def daily_payments():
             "work_order_number": wo.work_order_number or "",
             "account_name": wo.account_name or "-",
             "mine_name": wo.mine.name if wo.mine else "-",
-            "ddtds": wo.ddtds.isoformat() if wo.ddtds else None,
+            "ddtds_from": wo.ddtds_from.isoformat() if wo.ddtds_from else None,
+            "ddtds_to": wo.ddtds_to.isoformat() if wo.ddtds_to else None,
             "freight": freight,
             "cash": cash,
             "loading": loading,
@@ -865,12 +1085,11 @@ def add_daily_payment():
             total_freight=float(request.form.get("total_freight", 0) or 0),
             cash=float(request.form.get("cash", 0) or 0),
             loading=float(request.form.get("loading", 0) or 0),
-            total_advance=float(request.form.get("total_advance", 0) or 0),
-            shortage=float(request.form.get("shortage", 0) or 0),
             short_amt=float(request.form.get("short_amt", 0) or 0),
-            munsiyana=float(request.form.get("munsiyana", 0) or 0),
+            munsiyana=float(request.form.get("munsiyana", 300) or 300),
             tds=float(request.form.get("tds", 0) or 0),
-            ddtds=datetime.strptime(request.form.get("ddtds", "").strip(), "%Y-%m-%d").date() if request.form.get("ddtds", "").strip() else None,
+            ddtds_from=datetime.strptime(request.form.get("ddtds_from", "").strip(), "%Y-%m-%d").date() if request.form.get("ddtds_from", "").strip() else None,
+            ddtds_to=datetime.strptime(request.form.get("ddtds_to", "").strip(), "%Y-%m-%d").date() if request.form.get("ddtds_to", "").strip() else None,
             account_advance=float(request.form.get("account_advance", 0) or 0),
             rtgs=float(request.form.get("rtgs", 0) or 0),
             mines_qty=0,

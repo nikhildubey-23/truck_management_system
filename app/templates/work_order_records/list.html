@@ -100,11 +100,6 @@
             <div class="wo-card-main">
                 <a href="{{ url_for('work_order_records.view', id=wo.id) }}" class="wo-card-num">{{ wo.work_order_number or ('WO-' ~ wo.id) }}</a>
                 <span class="wo-card-date">{{ wo.date }}</span>
-                <span class="wo-card-sep">|</span>
-                <span class="wo-card-truck"><i class="bi bi-truck me-1"></i>{{ wo.lorry_number }}</span>
-                {% if wo.account_name %}
-                    <span class="wo-card-tag wo-tag-account"><i class="bi bi-person"></i> {{ wo.account_name }}</span>
-                {% endif %}
                 <span class="badge-status {{ 'completed' if wo.status == 'Completed' else 'pending' }}">{{ wo.status }}</span>
             </div>
             <div class="wo-card-actions">

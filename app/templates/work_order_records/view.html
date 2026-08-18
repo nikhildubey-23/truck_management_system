@@ -4,7 +4,7 @@
 <div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
     <div>
         <h3><i class="bi bi-file-earmark-text me-1"></i> Work Order {{ wo.work_order_number or ('#' ~ wo.id) }}</h3>
-        <div class="subtitle">{{ wo.date }} &middot; {{ wo.lorry_number }} &middot; {{ wo.mine.name if wo.mine else 'N/A' }}</div>
+        <div class="subtitle">{{ wo.date }} &middot; {{ wo.mine.name if wo.mine else 'N/A' }}</div>
     </div>
     <div class="d-flex gap-2">
         {% if wo.mine %}
@@ -51,8 +51,10 @@
             <tr>
                 <th style="width:100px; background:var(--bg);">TDS</th>
                 <td>&#8377; {{ "%.2f"|format(wo.tds) }}</td>
-                <th style="width:100px; background:var(--bg);">DD TDS</th>
-                <td>{{ wo.ddtds.isoformat() if wo.ddtds else '-' }}</td>
+                <th style="width:100px; background:var(--bg);">DD TDS From</th>
+                <td>{{ wo.ddtds_from.isoformat() if wo.ddtds_from else '-' }}</td>
+                <th style="width:100px; background:var(--bg);">DD TDS To</th>
+                <td>{{ wo.ddtds_to.isoformat() if wo.ddtds_to else '-' }}</td>
                 <th style="width:100px; background:var(--bg);">Acc Adv</th>
                 <td>&#8377; {{ "%.2f"|format(wo.account_advance) }}</td>
             </tr>
@@ -82,8 +84,10 @@
             <tr>
                 <th style="background:var(--bg);">TDS</th>
                 <td>&#8377; {{ "%.2f"|format(wo.tds) }}</td>
-                <th style="background:var(--bg);">DD TDS</th>
-                <td>{{ wo.ddtds.isoformat() if wo.ddtds else '-' }}</td>
+                <th style="background:var(--bg);">DD TDS From</th>
+                <td>{{ wo.ddtds_from.isoformat() if wo.ddtds_from else '-' }}</td>
+                <th style="background:var(--bg);">DD TDS To</th>
+                <td>{{ wo.ddtds_to.isoformat() if wo.ddtds_to else '-' }}</td>
                 <th style="background:var(--bg);">Account Adv</th>
                 <td>&#8377; {{ "%.2f"|format(wo.account_advance) }}</td>
             </tr>
@@ -128,16 +132,17 @@
 <div id="excelView">
 <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
     <div class="d-flex align-items-center gap-2">
-        <span class="text-muted small"><strong>{{ work_orders|length }}</strong> records</span>
+        <span class="text-muted small"><strong>{{ work_orders|length }}</strong> work orders</span>
         <span id="saveStatus" class="badge bg-success" style="display:none;transition:all .2s;"><i class="bi bi-check2-all"></i> Saved</span>
         <span id="saveSaving" class="badge bg-warning text-dark" style="display:none;"><i class="bi bi-arrow-repeat spin"></i> Saving...</span>
         <span id="saveError" class="badge bg-danger" style="display:none;"></span>
     </div>
     <div class="d-flex gap-2 flex-wrap">
+        <button class="btn btn-success btn-sm" onclick="saveRow()" id="saveRowBtn" title="Save all changes to database"><i class="bi bi-check-lg me-1"></i> Save</button>
         <a href="?export=csv" class="btn btn-sm btn-outline-success"><i class="bi bi-file-earmark-spreadsheet me-1"></i> CSV</a>
         <a href="{{ url_for('work_order_records.import_work_orders', wo_id=wo.id) }}" class="btn btn-sm btn-outline-info"><i class="bi bi-upload me-1"></i> Import</a>
         <button class="btn btn-sm btn-outline-secondary" onclick="undoLast()" title="Undo (Ctrl+Z)"><i class="bi bi-arrow-counterclockwise me-1"></i> Undo</button>
-        <button class="btn btn-sm btn-outline-primary" onclick="addRow()" title="Add new work order row"><i class="bi bi-plus-circle me-1"></i> Add Row</button>
+        <button class="btn btn-sm btn-outline-primary" onclick="addRow()" title="Add new entry row"><i class="bi bi-plus-circle me-1"></i> Add Row</button>
     </div>
 </div>
 
@@ -156,25 +161,27 @@
             <th class="excel-th resize-col" data-col="1">Date<div class="col-resize-handle" data-col="1"></div></th>
             <th class="excel-th resize-col" data-col="2">Truck<div class="col-resize-handle" data-col="2"></div></th>
             <th class="excel-th resize-col" data-col="3">Mine<div class="col-resize-handle" data-col="3"></div></th>
-            <th class="excel-th resize-col" data-col="4">Account<div class="col-resize-handle" data-col="4"></div></th>
-            <th class="excel-th resize-col" data-col="5">Remark<div class="col-resize-handle" data-col="5"></div></th>
-            <th class="excel-th resize-col" data-col="6">TDS<div class="col-resize-handle" data-col="6"></div></th>
-            <th class="excel-th resize-col" data-col="7">DD TDS<div class="col-resize-handle" data-col="7"></div></th>
-            <th class="excel-th resize-col" data-col="8">Acc Adv<div class="col-resize-handle" data-col="8"></div></th>
-            <th class="excel-th resize-col" data-col="9">Mines Qty<div class="col-resize-handle" data-col="9"></div></th>
-            <th class="excel-th resize-col" data-col="10">Plant Qty<div class="col-resize-handle" data-col="10"></div></th>
-            <th class="excel-th resize-col" data-col="11">Rate<div class="col-resize-handle" data-col="11"></div></th>
-            <th class="excel-th resize-col computed" data-col="12">Freight<div class="col-resize-handle" data-col="12"></div></th>
-            <th class="excel-th resize-col" data-col="13">Cash<div class="col-resize-handle" data-col="13"></div></th>
-            <th class="excel-th resize-col" data-col="14">Loading<div class="col-resize-handle" data-col="14"></div></th>
-            <th class="excel-th resize-col" data-col="15">Advance<div class="col-resize-handle" data-col="15"></div></th>
-            <th class="excel-th resize-col" data-col="16">Short<div class="col-resize-handle" data-col="16"></div></th>
+            <th class="excel-th resize-col" data-col="4">TDS<div class="col-resize-handle" data-col="4"></div></th>
+            <th class="excel-th resize-col" data-col="5">DD TDS From<div class="col-resize-handle" data-col="5"></div></th>
+            <th class="excel-th resize-col" data-col="6">DD TDS To<div class="col-resize-handle" data-col="6"></div></th>
+            <th class="excel-th resize-col" data-col="7">Acc Adv<div class="col-resize-handle" data-col="7"></div></th>
+            <th class="excel-th resize-col" data-col="8">Mines Qty<div class="col-resize-handle" data-col="8"></div></th>
+            <th class="excel-th resize-col" data-col="9">Plant Qty<div class="col-resize-handle" data-col="9"></div></th>
+            <th class="excel-th resize-col" data-col="10">Rate<div class="col-resize-handle" data-col="10"></div></th>
+            <th class="excel-th resize-col computed" data-col="11">Freight<div class="col-resize-handle" data-col="11"></div></th>
+            <th class="excel-th resize-col" data-col="12">Cash<div class="col-resize-handle" data-col="12"></div></th>
+            <th class="excel-th resize-col" data-col="13">Loading<div class="col-resize-handle" data-col="13"></div></th>
+            <th class="excel-th resize-col" data-col="14">Petrol<div class="col-resize-handle" data-col="14"></div></th>
+            <th class="excel-th resize-col computed" data-col="15">Advance<div class="col-resize-handle" data-col="15"></div></th>
+            <th class="excel-th resize-col computed" data-col="16">Short<div class="col-resize-handle" data-col="16"></div></th>
             <th class="excel-th resize-col" data-col="17">Short Amt<div class="col-resize-handle" data-col="17"></div></th>
             <th class="excel-th resize-col" data-col="18">Munsiyana<div class="col-resize-handle" data-col="18"></div></th>
             <th class="excel-th resize-col" data-col="19">RTGS<div class="col-resize-handle" data-col="19"></div></th>
             <th class="excel-th resize-col computed" data-col="20">Balance<div class="col-resize-handle" data-col="20"></div></th>
             <th class="excel-th resize-col" data-col="21">Status<div class="col-resize-handle" data-col="21"></div></th>
-            <th class="excel-th resize-col" data-col="22">Actions</th>
+            <th class="excel-th resize-col" data-col="22">Remark<div class="col-resize-handle" data-col="22"></div></th>
+            <th class="excel-th resize-col" data-col="23">Account<div class="col-resize-handle" data-col="23"></div></th>
+            <th class="excel-th resize-col" data-col="24">Actions</th>
         </tr>
     </thead>
     <tbody id="excelBody">
@@ -184,27 +191,32 @@
             <td class="excel-td editable" data-col="1" data-field="date" data-value="{{ wo.date }}">{{ wo.date }}</td>
             <td class="excel-td editable" data-col="2" data-field="lorry_number" data-value="{{ wo.lorry_number or '' }}">{{ wo.lorry_number or '' }}</td>
             <td class="excel-td editable" data-col="3" data-field="mine_id" data-value="{{ wo.mine_id or '' }}">{{ wo.mine.name if wo.mine else '-' }}</td>
-            <td class="excel-td editable" data-col="4" data-field="account_name" data-value="{{ wo.account_name or '' }}">{{ wo.account_name or '' }}</td>
-            <td class="excel-td editable" data-col="5" data-field="remark" data-value="{{ wo.remark or '' }}">{{ wo.remark or '' }}</td>
-            <td class="excel-td editable num" data-col="6" data-field="tds" data-value="{{ wo.tds or 0 }}" data-type="number">{{ "%.0f"|format(wo.tds or 0) }}</td>
-            <td class="excel-td editable" data-col="7" data-field="ddtds" data-value="{{ wo.ddtds.isoformat() if wo.ddtds else '' }}" data-type="date">{{ wo.ddtds.isoformat() if wo.ddtds else '' }}</td>
-            <td class="excel-td editable num" data-col="8" data-field="account_advance" data-value="{{ wo.account_advance or 0 }}" data-type="number">{{ "%.0f"|format(wo.account_advance or 0) }}</td>
-            <td class="excel-td editable num" data-col="9" data-field="mines_qty" data-value="{{ wo.mines_qty or 0 }}" data-type="number">{{ "%.1f"|format(wo.mines_qty or 0) }}</td>
-            <td class="excel-td editable num" data-col="10" data-field="plant_qty" data-value="{{ wo.plant_qty or 0 }}" data-type="number">{{ "%.1f"|format(wo.plant_qty or 0) }}</td>
-            <td class="excel-td editable num" data-col="11" data-field="rate" data-value="{{ wo.rate or 0 }}" data-type="number">{{ "%.0f"|format(wo.rate or 0) }}</td>
-            <td class="excel-td computed num" data-col="12" data-field="total_freight" data-value="{{ wo.total_freight or 0 }}">{{ "%.0f"|format(wo.total_freight or 0) }}</td>
-            <td class="excel-td editable num" data-col="13" data-field="cash" data-value="{{ wo.cash or 0 }}" data-type="number">{{ "%.0f"|format(wo.cash or 0) }}</td>
-            <td class="excel-td editable num" data-col="14" data-field="loading" data-value="{{ wo.loading or 0 }}" data-type="number">{{ "%.0f"|format(wo.loading or 0) }}</td>
-            <td class="excel-td editable num" data-col="15" data-field="total_advance" data-value="{{ wo.total_advance or 0 }}" data-type="number">{{ "%.0f"|format(wo.total_advance or 0) }}</td>
-            <td class="excel-td editable num" data-col="16" data-field="shortage" data-value="{{ wo.shortage or 0 }}" data-type="number">{{ "%.1f"|format(wo.shortage or 0) }}</td>
+            <td class="excel-td editable num" data-col="4" data-field="tds" data-value="{{ wo.tds or 0 }}" data-type="number">{{ "%.0f"|format(wo.tds or 0) }}</td>
+            <td class="excel-td editable" data-col="5" data-field="ddtds_from" data-value="{{ wo.ddtds_from.isoformat() if wo.ddtds_from else '' }}" data-type="date">{{ wo.ddtds_from.isoformat() if wo.ddtds_from else '' }}</td>
+            <td class="excel-td editable" data-col="6" data-field="ddtds_to" data-value="{{ wo.ddtds_to.isoformat() if wo.ddtds_to else '' }}" data-type="date">{{ wo.ddtds_to.isoformat() if wo.ddtds_to else '' }}</td>
+            <td class="excel-td editable num" data-col="7" data-field="account_advance" data-value="{{ wo.account_advance or 0 }}" data-type="number">{{ "%.0f"|format(wo.account_advance or 0) }}</td>
+            <td class="excel-td editable num" data-col="8" data-field="mines_qty" data-value="{{ wo.mines_qty or 0 }}" data-type="number">{{ "%.1f"|format(wo.mines_qty or 0) }}</td>
+            <td class="excel-td editable num" data-col="9" data-field="plant_qty" data-value="{{ wo.plant_qty or 0 }}" data-type="number">{{ "%.1f"|format(wo.plant_qty or 0) }}</td>
+            <td class="excel-td editable num" data-col="10" data-field="rate" data-value="{{ wo.rate or 0 }}" data-type="number">{{ "%.0f"|format(wo.rate or 0) }}</td>
+            <td class="excel-td computed num" data-col="11" data-field="total_freight" data-value="{{ wo.total_freight or 0 }}">{{ "%.0f"|format(wo.total_freight or 0) }}</td>
+            <td class="excel-td editable num" data-col="12" data-field="cash" data-value="{{ wo.cash or 0 }}" data-type="number">{{ "%.0f"|format(wo.cash or 0) }}</td>
+            <td class="excel-td editable num" data-col="13" data-field="loading" data-value="{{ wo.loading or 0 }}" data-type="number">{{ "%.0f"|format(wo.loading or 0) }}</td>
+            <td class="excel-td petrol-cell" data-col="14" data-value="" ondblclick="openPetrolEditor(this.closest('tr'))" title="Double-click to edit petrol">
+                {% for ps in wo.petrol_stations %}{% if not loop.first %}, {% endif %}{{ ps.name }}:{{ "%.0f"|format(ps.amount) }}{% endfor %}
+            </td>
+            <td class="excel-td computed num" data-col="15" data-field="total_advance" data-value="{{ wo.total_advance or 0 }}">{{ "%.0f"|format(wo.total_advance or 0) }}</td>
+            <td class="excel-td computed num" data-col="16" data-field="shortage" data-value="{{ wo.shortage or 0 }}">{{ "%.1f"|format(wo.shortage or 0) }}</td>
             <td class="excel-td editable num" data-col="17" data-field="short_amt" data-value="{{ wo.short_amt or 0 }}" data-type="number">{{ "%.0f"|format(wo.short_amt or 0) }}</td>
-            <td class="excel-td editable num" data-col="18" data-field="munsiyana" data-value="{{ wo.munsiyana or 0 }}" data-type="number">{{ "%.0f"|format(wo.munsiyana or 0) }}</td>
+            <td class="excel-td editable num" data-col="18" data-field="munsiyana" data-value="{{ wo.munsiyana or 300 }}" data-type="number">{{ "%.0f"|format(wo.munsiyana or 300) }}</td>
             <td class="excel-td editable num" data-col="19" data-field="rtgs" data-value="{{ wo.rtgs or 0 }}" data-type="number">{{ "%.0f"|format(wo.rtgs or 0) }}</td>
             <td class="excel-td computed num" data-col="20" data-field="balance" data-value="{{ wo.balance or 0 }}" style="font-weight:700;">{{ "%.0f"|format(wo.balance or 0) }}</td>
             <td class="excel-td" data-col="21" data-value="{{ wo.status }}"><span class="badge-status {{ 'completed' if wo.status == 'Completed' else 'pending' }}" style="font-size:.65rem;">{{ wo.status }}</span></td>
-            <td class="excel-td no-print" data-col="22">
-                <a href="{{ url_for('work_order_records.view', id=wo.id) }}" class="excel-action-btn" title="View"><i class="bi bi-eye"></i></a>
-                <a href="{{ url_for('work_order_records.edit', id=wo.id) }}" class="excel-action-btn" title="Edit"><i class="bi bi-pencil"></i></a>
+            <td class="excel-td editable" data-col="22" data-field="remark" data-value="{{ wo.remark or '' }}">{{ wo.remark or '' }}</td>
+            <td class="excel-td editable" data-col="23" data-field="account_name" data-value="{{ wo.account_name or '' }}">{{ wo.account_name or '' }}</td>
+            <td class="excel-td no-print" data-col="24" style="white-space:nowrap;">
+                <button type="button" class="excel-action-btn" title="Edit row" onclick="var r=this.closest('tr'); var cell=r.querySelector('.editable'); if(cell){startEdit(cell);}"><i class="bi bi-pencil"></i></button>
+                <button type="button" class="excel-action-btn" title="Petrol stations" onclick="openPetrolEditor(this.closest('tr'))"><i class="bi bi-fuel-pump"></i></button>
+                <button type="button" class="excel-action-btn" title="Delete work order" onclick="deleteWorkOrder({{ wo.id }})"><i class="bi bi-trash"></i></button>
             </td>
         </tr>
         {% endfor %}
@@ -214,7 +226,7 @@
 
 {# ── Status Bar ── #}
 <div class="excel-status-bar">
-    <div><i class="bi bi-file-earmark-text me-1"></i> {{ work_orders|length }} rows</div>
+    <div><i class="bi bi-file-earmark-text me-1"></i> 1 row</div>
     <div id="statusAvg"></div>
     <div id="statusSum"></div>
     <div id="statusCount"></div>
@@ -228,7 +240,6 @@
     <div class="ctx-item" data-action="paste"><i class="bi bi-clipboard-check me-2"></i>Paste</div>
     <div class="ctx-divider"></div>
     <div class="ctx-item" data-action="clear"><i class="bi bi-eraser me-2"></i>Clear Cell</div>
-    <div class="ctx-item" data-action="deleteRow"><i class="bi bi-trash me-2"></i>Delete Row</div>
     <div class="ctx-divider"></div>
     <div class="ctx-item" data-action="sortAsc"><i class="bi bi-sort-alpha-up me-2"></i>Sort A&rarr;Z</div>
     <div class="ctx-item" data-action="sortDesc"><i class="bi bi-sort-alpha-down me-2"></i>Sort Z&rarr;A</div>
@@ -400,6 +411,25 @@
 .excel-table .excel-th:nth-child(2) {
     border-left: 2px solid #d0d7de;
 }
+
+/* Petrol popup */
+.petrol-popup {
+    position: fixed; z-index: 9999; width: 320px;
+    background: #fff; border: 1px solid #d0d7de;
+    border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.18);
+    padding: 10px; font-size: .82rem;
+}
+.petrol-popup .pp-header { font-weight: 700; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+.petrol-popup .pp-row { display: flex; gap: 4px; margin-bottom: 4px; align-items: center; }
+.petrol-popup .pp-row input { flex: 1; padding: 4px 6px; border: 1px solid #d0d7de; border-radius: 4px; font-size: .8rem; }
+.petrol-popup .pp-row input.pp-name { flex: 2; }
+.petrol-popup .pp-row input.pp-amt { flex: 1; }
+.petrol-popup .pp-total { font-weight: 700; border-top: 1px solid #d0d7de; padding-top: 6px; margin-top: 6px; text-align: right; }
+.petrol-popup .pp-actions { display: flex; gap: 6px; margin-top: 8px; }
+.petrol-popup .pp-del { background: none; border: none; color: #d1242f; cursor: pointer; font-size: .9rem; padding: 0 4px; }
+.petrol-popup .pp-del:hover { color: #a40e26; }
+.petrol-cell { font-size: .75rem; color: #0969da; cursor: pointer; max-width: 180px; }
+.petrol-cell:hover { background: #ddf4ff !important; }
 </style>
 
 <script>
@@ -416,7 +446,7 @@ const AUTOSAVE_ID = "{{ wo.id }}";
 const editableFields = {
     date: 'date', lorry_number: 'text', work_order_number: 'text',
     account_name: 'text', remark: 'text', mine_id: 'select',
-    ddtds: 'date', tds: 'number', account_advance: 'number',
+    ddtds_from: 'date', ddtds_to: 'date', tds: 'number', account_advance: 'number',
     mines_qty: 'number', plant_qty: 'number', rate: 'number',
     cash: 'number', loading: 'number', total_advance: 'number',
     shortage: 'number', short_amt: 'number', munsiyana: 'number',
@@ -484,7 +514,7 @@ function clearStatusAggregates() {
 }
 
 /* ─── Inline Editing ─── */
-function startEdit(td) {
+window.startEdit = function startEdit(td) {
     if (editingCell && editingCell !== td) commitEdit(editingCell);
     if (!td.classList.contains('editable')) return;
     editingCell = td;
@@ -537,9 +567,12 @@ function commitEdit(td) {
         td.innerHTML = formatDisplay(field, dtype, oldVal);
         return;
     }
+    console.log('[COMMIT] field=' + field + ' old="' + oldVal + '" new="' + newVal + '"');
 
     // Push undo
-    undoStack.push({ id: AUTOSAVE_ID, field: field, oldValue: oldVal, newValue: newVal, cell: td });
+    const row = td.closest('tr');
+    const rowWoId = row ? row.dataset.id : AUTOSAVE_ID;
+    undoStack.push({ id: rowWoId, field: field, oldValue: oldVal, newValue: newVal, cell: td });
     if (undoStack.length > 50) undoStack.shift();
 
     td.dataset.value = newVal;
@@ -547,7 +580,9 @@ function commitEdit(td) {
     td.style.outline = '2px solid #d4a017';
     td.style.outlineOffset = '-2px';
 
-    autosaveField(td, AUTOSAVE_ID, field, newVal);
+    if (rowWoId > 0) {
+        autosaveField(td, parseInt(rowWoId), field, newVal);
+    }
 }
 
 function cancelEdit(td, origHTML, origValue) {
@@ -585,41 +620,126 @@ function moveCell(dRow, dCol) {
 }
 
 function addRow() {
-    const idx = tbody.querySelectorAll('.excel-row').length + 1;
-    const d = new Date().toISOString().split('T')[0];
-    let mineOpts = '<option value="">— None —</option>';
-    mines.forEach(m => { mineOpts += `<option value="${m.id}">${m.name}</option>`; });
-    const tr = document.createElement('tr');
-    tr.className = 'excel-row';
-    tr.dataset.id = '0';
-    tr.dataset.row = idx - 1;
-    tr.innerHTML = `
-        <td class="excel-td excel-td-num" data-col="0">${idx}</td>
-        <td class="excel-td editable" data-col="1" data-field="date" data-value="${d}">${d}</td>
-        <td class="excel-td editable" data-col="2" data-field="lorry_number" data-value=""></td>
-        <td class="excel-td editable" data-col="3" data-field="mine_id" data-value="">${mineOpts}</td>
-        <td class="excel-td editable" data-col="4" data-field="account_name" data-value=""></td>
-        <td class="excel-td editable" data-col="5" data-field="remark" data-value=""></td>
-        <td class="excel-td editable num" data-col="6" data-field="tds" data-value="0" data-type="number">0</td>
-        <td class="excel-td editable" data-col="7" data-field="ddtds" data-value="" data-type="date"></td>
-        <td class="excel-td editable num" data-col="8" data-field="account_advance" data-value="0" data-type="number">0</td>
-        <td class="excel-td editable num" data-col="9" data-field="mines_qty" data-value="0" data-type="number">0</td>
-        <td class="excel-td editable num" data-col="10" data-field="plant_qty" data-value="0" data-type="number">0</td>
-        <td class="excel-td editable num" data-col="11" data-field="rate" data-value="0" data-type="number">0</td>
-        <td class="excel-td computed num" data-col="12" data-field="total_freight" data-value="0">0</td>
-        <td class="excel-td editable num" data-col="13" data-field="cash" data-value="0" data-type="number">0</td>
-        <td class="excel-td editable num" data-col="14" data-field="loading" data-value="0" data-type="number">0</td>
-        <td class="excel-td editable num" data-col="15" data-field="total_advance" data-value="0" data-type="number">0</td>
-        <td class="excel-td editable num" data-col="16" data-field="shortage" data-value="0" data-type="number">0</td>
-        <td class="excel-td editable num" data-col="17" data-field="short_amt" data-value="0" data-type="number">0</td>
-        <td class="excel-td editable num" data-col="18" data-field="munsiyana" data-value="0" data-type="number">0</td>
-        <td class="excel-td editable num" data-col="19" data-field="rtgs" data-value="0" data-type="number">0</td>
-        <td class="excel-td computed num" data-col="20" data-field="balance" data-value="0" style="font-weight:700;">0</td>
-        <td class="excel-td" data-col="21" data-value="Pending"><span class="badge-status pending" style="font-size:.65rem;">Pending</span></td>
-        <td class="excel-td no-print" data-col="22"></td>`;
-    tbody.appendChild(tr);
-    const firstTd = tr.querySelector('.editable');
-    if (firstTd) { selectCell(firstTd); firstTd.scrollIntoView({block:'nearest'}); }
+    const woId = {{ wo.id|tojson }};
+    const tbody = document.getElementById('excelBody');
+    const btn = document.querySelector('[onclick="addRow()"]');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="bi bi-arrow-repeat spin me-1"></i> Adding...'; }
+
+    fetch('/work-orders/add-entry/' + woId, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-plus-circle me-1"></i> Add Row'; }
+        if (!data.ok) { showError(data.error || 'Failed'); return; }
+
+        const newId = data.id;
+        const idx = tbody.querySelectorAll('.excel-row').length + 1;
+        const d = new Date().toISOString().split('T')[0];
+        const mineId = {{ wo.mine_id|tojson }};
+        const defaultMine = mines.find(m => m.id == mineId);
+        const mineName = defaultMine ? defaultMine.name : '-';
+        const tr = document.createElement('tr');
+        tr.className = 'excel-row';
+        tr.dataset.id = newId;
+        tr.dataset.row = idx;
+        tr.innerHTML = `
+            <td class="excel-td excel-td-num" data-col="0">${idx}</td>
+            <td class="excel-td editable" data-col="1" data-field="date" data-value="${d}">${d}</td>
+            <td class="excel-td editable" data-col="2" data-field="lorry_number" data-value="-">-</td>
+            <td class="excel-td editable" data-col="3" data-field="mine_id" data-value="${mineId}">${mineName}</td>
+            <td class="excel-td editable num" data-col="4" data-field="tds" data-value="0" data-type="number">0</td>
+            <td class="excel-td editable" data-col="5" data-field="ddtds_from" data-value="" data-type="date"></td>
+            <td class="excel-td editable" data-col="6" data-field="ddtds_to" data-value="" data-type="date"></td>
+            <td class="excel-td editable num" data-col="7" data-field="account_advance" data-value="0" data-type="number">0</td>
+            <td class="excel-td editable num" data-col="8" data-field="mines_qty" data-value="0" data-type="number">0</td>
+            <td class="excel-td editable num" data-col="9" data-field="plant_qty" data-value="0" data-type="number">0</td>
+            <td class="excel-td editable num" data-col="10" data-field="rate" data-value="0" data-type="number">0</td>
+            <td class="excel-td computed num" data-col="11" data-field="total_freight" data-value="0">0</td>
+            <td class="excel-td editable num" data-col="12" data-field="cash" data-value="0" data-type="number">0</td>
+            <td class="excel-td editable num" data-col="13" data-field="loading" data-value="0" data-type="number">0</td>
+            <td class="excel-td petrol-cell" data-col="14" data-value="" ondblclick="openPetrolEditor(this.closest('tr'))" title="Double-click to edit petrol"></td>
+            <td class="excel-td computed num" data-col="15" data-field="total_advance" data-value="0">0</td>
+            <td class="excel-td computed num" data-col="16" data-field="shortage" data-value="0">0</td>
+            <td class="excel-td editable num" data-col="17" data-field="short_amt" data-value="0" data-type="number">0</td>
+            <td class="excel-td editable num" data-col="18" data-field="munsiyana" data-value="300" data-type="number">300</td>
+            <td class="excel-td editable num" data-col="19" data-field="rtgs" data-value="0" data-type="number">0</td>
+            <td class="excel-td computed num" data-col="20" data-field="balance" data-value="0" style="font-weight:700;">0</td>
+            <td class="excel-td" data-col="21" data-value="Pending"><span class="badge-status pending" style="font-size:.65rem;">Pending</span></td>
+            <td class="excel-td editable" data-col="22" data-field="remark" data-value=""></td>
+            <td class="excel-td editable" data-col="23" data-field="account_name" data-value=""></td>
+            <td class="excel-td no-print" data-col="24" style="white-space:nowrap;">
+                <button type="button" class="excel-action-btn" title="Edit row" onclick="var r=this.closest('tr'); var cell=r.querySelector('.editable'); if(cell){startEdit(cell);}"><i class="bi bi-pencil"></i></button>
+                <button type="button" class="excel-action-btn" title="Petrol stations" onclick="openPetrolEditor(this.closest('tr'))"><i class="bi bi-fuel-pump"></i></button>
+                <button type="button" class="excel-action-btn" title="Delete" onclick="deleteWorkOrder(${newId})"><i class="bi bi-trash"></i></button>
+            </td>`;
+        tbody.appendChild(tr);
+        const firstTd = tr.querySelector('.editable');
+        if (firstTd) { selectCell(firstTd); firstTd.scrollIntoView({block:'nearest'}); }
+    })
+    .catch(() => {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-plus-circle me-1"></i> Add Row'; }
+        showError('Network error');
+    });
+}
+
+function saveRow() {
+    const rows = document.querySelectorAll('.excel-row');
+    const payloads = [];
+
+    rows.forEach(row => {
+        const woId = parseInt(row.dataset.id);
+        if (!woId) return;
+        const cells = row.querySelectorAll('.editable');
+        const payload = {};
+        cells.forEach(cell => {
+            const field = cell.dataset.field;
+            const dtype = cell.dataset.type || 'text';
+            let val = cell.dataset.value;
+            if (dtype === 'number') val = parseFloat(val) || 0;
+            if (field) payload[field] = val;
+        });
+        payloads.push({woId, payload, row});
+    });
+
+    const btn = document.getElementById('saveRowBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-arrow-repeat spin me-1"></i> Saving...';
+    showSaving();
+
+    if (payloads.length === 0) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-check-lg me-1"></i> Save'; return; }
+
+    let done = 0;
+    function checkDone() {
+        done++;
+        if (done >= payloads.length) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-lg me-1"></i> Save';
+            showSaved();
+        }
+    }
+
+    payloads.forEach(({woId, payload, row}) => {
+        fetch('/work-orders/save/' + woId, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.ok) {
+                const freightTd = row.querySelector('[data-field="total_freight"]');
+                const balanceTd = row.querySelector('[data-field="balance"]');
+                const statusTd = row.querySelector('[data-col="22"] span');
+                if (freightTd) { freightTd.dataset.value = data.total_freight; freightTd.textContent = parseFloat(data.total_freight).toLocaleString('en-IN', {maximumFractionDigits:0}); }
+                if (balanceTd) { balanceTd.dataset.value = data.balance; balanceTd.textContent = parseFloat(data.balance).toLocaleString('en-IN', {maximumFractionDigits:0}); }
+                if (statusTd) { statusTd.textContent = data.status; statusTd.className = 'badge-status ' + (data.status === 'Completed' ? 'completed' : 'pending'); }
+            }
+            checkDone();
+        })
+        .catch(() => checkDone());
+    });
 }
 
 /* ─── Autosave ─── */
@@ -628,22 +748,26 @@ function autosaveField(td, woId, field, value) {
     if (autoSaveTimers[key]) clearTimeout(autoSaveTimers[key]);
     showSaving();
     autoSaveTimers[key] = setTimeout(() => {
-        fetch(AUTOSAVE_URL, {
+        console.log('[AUTOSAVE] Sending:', {url: '/work-orders/autosave/' + woId, field, value});
+        fetch('/work-orders/autosave/' + woId, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({field: field, value: value, wo_id: woId})
+            body: JSON.stringify({field: field, value: value})
         })
         .then(r => r.json())
         .then(data => {
             if (data.ok) {
                 showSaved();
-                // Update computed cells in same row
                 const row = td.closest('tr');
                 if (row) {
                     const freightTd = row.querySelector('[data-field="total_freight"]');
+                    const advanceTd = row.querySelector('[data-field="total_advance"]');
+                    const shortageTd = row.querySelector('[data-field="shortage"]');
                     const balanceTd = row.querySelector('[data-field="balance"]');
                     const statusTd = row.querySelector('[data-col="21"] span');
                     if (freightTd) { freightTd.dataset.value = data.total_freight; freightTd.textContent = parseFloat(data.total_freight).toLocaleString('en-IN', {maximumFractionDigits:0}); }
+                    if (advanceTd && data.total_advance !== undefined) { advanceTd.dataset.value = data.total_advance; advanceTd.textContent = parseFloat(data.total_advance).toLocaleString('en-IN', {maximumFractionDigits:0}); }
+                    if (shortageTd && data.shortage !== undefined) { shortageTd.dataset.value = data.shortage; shortageTd.textContent = parseFloat(data.shortage).toLocaleString('en-IN', {maximumFractionDigits:1}); }
                     if (balanceTd) { balanceTd.dataset.value = data.balance; balanceTd.textContent = parseFloat(data.balance).toLocaleString('en-IN', {maximumFractionDigits:0}); }
                     if (statusTd) {
                         statusTd.textContent = data.balance <= 0 ? 'Completed' : 'Pending';
@@ -762,7 +886,8 @@ document.addEventListener('keydown', function(e) {
     if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
         if (selectedCell && selectedCell.classList.contains('editable')) {
             selectedCell.dataset.value = clipboard;
-            autosaveField(selectedCell, AUTOSAVE_ID, selectedCell.dataset.field, clipboard);
+            const _rid = parseInt(selectedCell.closest('tr').dataset.id);
+            if (_rid > 0) autosaveField(selectedCell, _rid, selectedCell.dataset.field, clipboard);
             selectedCell.textContent = clipboard;
         }
         e.preventDefault(); return;
@@ -784,7 +909,8 @@ document.addEventListener('keydown', function(e) {
         if (selectedCell.classList.contains('editable')) {
             selectedCell.dataset.value = '';
             selectedCell.textContent = '';
-            autosaveField(selectedCell, AUTOSAVE_ID, selectedCell.dataset.field, '');
+            const _rid = parseInt(selectedCell.closest('tr').dataset.id);
+            if (_rid > 0) autosaveField(selectedCell, _rid, selectedCell.dataset.field, '');
         }
     } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
         if (selectedCell.classList.contains('editable')) {
@@ -824,14 +950,16 @@ contextMenu.addEventListener('click', function(e) {
             if (selectedCell.classList.contains('editable')) {
                 selectedCell.dataset.value = t;
                 selectedCell.textContent = t;
-                autosaveField(selectedCell, AUTOSAVE_ID, selectedCell.dataset.field, t);
+                const _rid = parseInt(selectedCell.closest('tr').dataset.id);
+                if (_rid > 0) autosaveField(selectedCell, _rid, selectedCell.dataset.field, t);
             }
         });
     } else if (action === 'clear') {
         if (selectedCell.classList.contains('editable')) {
             selectedCell.dataset.value = '';
             selectedCell.textContent = '';
-            autosaveField(selectedCell, AUTOSAVE_ID, selectedCell.dataset.field, '');
+            const _rid = parseInt(selectedCell.closest('tr').dataset.id);
+            if (_rid > 0) autosaveField(selectedCell, _rid, selectedCell.dataset.field, '');
         }
     } else if (action === 'deleteRow') {
         if (confirm('Delete this row?')) {
@@ -870,7 +998,8 @@ formulaInput.addEventListener('keydown', function(e) {
     if (e.key === 'Enter') {
         e.preventDefault();
         selectedCell.dataset.value = formulaInput.value;
-        autosaveField(selectedCell, AUTOSAVE_ID, selectedCell.dataset.field, formulaInput.value);
+        const _rid = parseInt(selectedCell.closest('tr').dataset.id);
+        if (_rid > 0) autosaveField(selectedCell, _rid, selectedCell.dataset.field, formulaInput.value);
         selectedCell.textContent = selectedCell.dataset.type === 'number'
             ? parseFloat(formulaInput.value||0).toLocaleString('en-IN', {maximumFractionDigits:1})
             : formulaInput.value;
@@ -879,10 +1008,147 @@ formulaInput.addEventListener('keydown', function(e) {
 
 /* ─── Prevent browser shortcuts conflict ─── */
 document.addEventListener('keydown', function(e) {
-    if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); }
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); saveRow(); }
 });
 
+/* ─── Petrol Stations Popup ─── */
+let activePetrolPopup = null;
+let activePetrolTr = null;
+
+function openPetrolEditor(tr) {
+    closePetrolPopup();
+    activePetrolTr = tr;
+    const woId = tr.dataset.id;
+
+    fetch('/work-orders/petrol/list/' + woId)
+    .then(r => r.json())
+    .then(data => {
+        const stations = data.stations || [];
+        showPetrolPopup(tr, woId, stations);
+    });
+}
+
+function showPetrolPopup(tr, woId, stations) {
+    const popup = document.createElement('div');
+    popup.className = 'petrol-popup';
+    const btn = tr.querySelector('[title="Petrol stations"]');
+    const rect = btn.getBoundingClientRect();
+    popup.style.top = (rect.bottom + 4) + 'px';
+    popup.style.left = Math.min(rect.left, window.innerWidth - 340) + 'px';
+
+    let rowsHtml = '';
+    stations.forEach(s => {
+        rowsHtml += '<div class="pp-row" data-ps-id="' + s.id + '">'
+            + '<input type="text" class="pp-name" value="' + (s.name||'').replace(/"/g,'&quot;') + '" oninput="savePetrolRow(this,' + s.id + ',\'name\')">'
+            + '<input type="number" step="0.01" class="pp-amt" value="' + (s.amount||0) + '" oninput="savePetrolRow(this,' + s.id + ',\'amount\')">'
+            + '<button class="pp-del" onclick="deletePetrolRow(this,' + s.id + ')"><i class="bi bi-x-lg"></i></button>'
+            + '</div>';
+    });
+
+    const total = stations.reduce((a, s) => a + (parseFloat(s.amount)||0), 0);
+
+    popup.innerHTML = '<div class="pp-header"><span><i class="bi bi-fuel-pump me-1"></i> Petrol Stations</span>'
+        + '<button class="btn btn-sm btn-outline-secondary" onclick="closePetrolPopup()"><i class="bi bi-x"></i></button></div>'
+        + '<div id="petrolPopupRows">' + rowsHtml + '</div>'
+        + '<div class="pp-total" id="petrolPopupTotal">&#8377; ' + total.toFixed(2) + '</div>'
+        + '<div class="pp-actions">'
+        + '<button class="btn btn-sm btn-outline-primary" onclick="addPetrolPopupRow(' + woId + ')"><i class="bi bi-plus"></i> Add Station</button>'
+        + '</div>';
+
+    document.body.appendChild(popup);
+    activePetrolPopup = popup;
+}
+
+function closePetrolPopup() {
+    if (activePetrolPopup) { activePetrolPopup.remove(); activePetrolPopup = null; }
+    activePetrolTr = null;
+}
+
+function refreshPetrolCell() {
+    if (!activePetrolTr) return;
+    const cell = activePetrolTr.querySelector('.petrol-cell');
+    if (!cell) return;
+    const rows = document.querySelectorAll('.petrol-popup .pp-row');
+    let parts = [];
+    rows.forEach(r => {
+        const name = r.querySelector('.pp-name').value.trim();
+        const amt = r.querySelector('.pp-amt').value || 0;
+        if (name) parts.push(name + ':' + parseFloat(amt).toFixed(0));
+    });
+    cell.textContent = parts.join(', ');
+}
+
+function addPetrolPopupRow(woId) {
+    const container = document.getElementById('petrolPopupRows');
+    fetch('/work-orders/petrol/add', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({work_order_id: woId, field: 'name', value: 'New Station'})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (!data.ok) return;
+        const div = document.createElement('div');
+        div.className = 'pp-row';
+        div.dataset.psId = data.ps_id;
+        div.innerHTML = '<input type="text" class="pp-name" value="New Station" oninput="savePetrolRow(this,' + data.ps_id + ',\'name\')">'
+            + '<input type="number" step="0.01" class="pp-amt" value="0" oninput="savePetrolRow(this,' + data.ps_id + ',\'amount\')">'
+            + '<button class="pp-del" onclick="deletePetrolRow(this,' + data.ps_id + ')"><i class="bi bi-x-lg"></i></button>';
+        container.appendChild(div);
+        div.querySelector('.pp-name').focus();
+        div.querySelector('.pp-name').select();
+        refreshPetrolCell();
+    });
+}
+
+function savePetrolRow(input, psId, field) {
+    const val = field === 'name' ? input.value : (input.value || 0);
+    fetch('/work-orders/petrol/' + psId, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({field: field, value: val})
+    }).then(() => { updatePetrolPopupTotal(); refreshPetrolCell(); });
+}
+
+function deletePetrolRow(btn, psId) {
+    fetch('/work-orders/petrol/' + psId, {
+        method: 'DELETE',
+        headers: {'Content-Type': 'application/json'}
+    }).then(() => {
+        btn.closest('.pp-row').remove();
+        updatePetrolPopupTotal();
+        refreshPetrolCell();
+    });
+}
+
+function updatePetrolPopupTotal() {
+    let total = 0;
+    document.querySelectorAll('.petrol-popup .pp-amt').forEach(inp => {
+        total += parseFloat(inp.value) || 0;
+    });
+    document.getElementById('petrolPopupTotal').textContent = '\u20B9 ' + total.toFixed(2);
+}
+
+document.addEventListener('click', function(e) {
+    if (activePetrolPopup && !activePetrolPopup.contains(e.target) && !e.target.closest('[title="Petrol stations"]')) {
+        closePetrolPopup();
+    }
+});
+
+function deleteWorkOrder(woId) {
+    if (!confirm('Delete this work order?')) return;
+    fetch('/work-orders/delete/' + woId, { method: 'POST' })
+    .then(() => { window.location.href = '{{ url_for("work_order_records.work_orders") }}'; });
+}
+
 window.addRow = addRow;
+window.openPetrolEditor = openPetrolEditor;
+window.closePetrolPopup = closePetrolPopup;
+window.addPetrolPopupRow = addPetrolPopupRow;
+window.savePetrolRow = savePetrolRow;
+window.deletePetrolRow = deletePetrolRow;
+window.deleteWorkOrder = deleteWorkOrder;
+window.saveRow = saveRow;
 })();
 </script>
 

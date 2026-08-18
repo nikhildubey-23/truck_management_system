@@ -2,141 +2,28 @@
 {% block content %}
 <div class="page-header">
     <h3>{% if work_order %}Edit Work Order{% else %}Add Work Order{% endif %}</h3>
-    <div class="subtitle">{% if work_order %}Update work order record{% else %}Create a new work order record{% endif %}</div>
+    <div class="subtitle">{% if work_order %}Update work order record{% else %}Allocate a new work order{% endif %}</div>
 </div>
 
 <div class="row justify-content-center">
-    <div class="col-lg-10">
+    <div class="col-lg-6">
         <div class="card">
-            <div class="card-header"><i class="bi bi-file-earmark-text me-1"></i> Work Order Details</div>
+            <div class="card-header"><i class="bi bi-file-earmark-text me-1"></i> Work Order</div>
             <div class="card-body">
                 <form method="POST" id="workOrderForm">
                     <div class="row g-3">
-                        <div class="col-md-3">
-                            <label class="form-label">WO Number</label>
-                            <input type="text" name="work_order_number" class="form-control" value="{{ work_order.work_order_number if work_order else '' }}" placeholder="e.g. WO-001">
+                        <div class="col-md-12">
+                            <label class="form-label">Work Order Number <span class="text-danger">*</span></label>
+                            <input type="text" name="work_order_number" class="form-control" value="{{ work_order.work_order_number if work_order else '' }}" placeholder="e.g. RAJ-001" required>
                         </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Date <span class="text-danger">*</span></label>
-                            <input type="date" name="date" class="form-control" value="{{ work_order.date if work_order else '' }}" required>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Lorry Number <span class="text-danger">*</span></label>
-                            <input type="text" name="lorry_number" class="form-control" value="{{ work_order.lorry_number if work_order else '' }}" placeholder="e.g. RJ-14-GB-1234" required>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Mine</label>
-                            <select name="mine_id" class="form-select">
+                        <div class="col-md-12">
+                            <label class="form-label">Allocate to Mine <span class="text-danger">*</span></label>
+                            <select name="mine_id" class="form-select" required>
                                 <option value="">-- Select Mine --</option>
                                 {% for m in mines %}
                                 <option value="{{ m.id }}" {% if work_order and work_order.mine_id == m.id %}selected{% endif %}>{{ m.name }}</option>
                                 {% endfor %}
                             </select>
-                        </div>
-                            <div class="col-md-2">
-                                <label class="form-label">TDS</label>
-                                <input type="number" step="0.01" name="tds" class="form-control deduction-field" value="{{ work_order.tds if work_order else '0' }}">
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label">DD TDS Date</label>
-                                <input type="date" name="ddtds" class="form-control" value="{{ work_order.ddtds.isoformat() if work_order and work_order.ddtds else '' }}">
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label">Account Adv</label>
-                                <input type="number" step="0.01" name="account_advance" class="form-control deduction-field" value="{{ work_order.account_advance if work_order else '0' }}">
-                            </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Mines Qty</label>
-                            <input type="number" step="0.01" name="mines_qty" id="minesQty" class="form-control" value="{{ work_order.mines_qty if work_order else '0' }}">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Plant Qty</label>
-                            <input type="number" step="0.01" name="plant_qty" class="form-control" value="{{ work_order.plant_qty if work_order else '0' }}">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Rate</label>
-                            <input type="number" step="0.01" name="rate" id="rate" class="form-control" value="{{ work_order.rate if work_order else '0' }}">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Total Freight</label>
-                            <input type="text" class="form-control" id="totalFreightDisplay" value="0" readonly style="font-weight:bold;color:var(--primary);">
-                        </div>
-                    </div>
-
-                    <hr class="my-3">
-                    <h6 class="fw-bold"><i class="bi bi-fuel-pump me-1"></i> Petrol Stations</h6>
-                    <div id="petrolStationContainer">
-                        {% if work_order and work_order.petrol_stations %}
-                            {% for ps in work_order.petrol_stations %}
-                            <div class="row g-1 mb-2 petrol-row">
-                                <div class="col-7">
-                                    <input type="text" name="petrol_name[]" class="form-control" value="{{ ps.name }}" placeholder="Petrol station name">
-                                </div>
-                                <div class="col-3">
-                                    <input type="number" step="0.01" name="petrol_amount[]" class="form-control" value="{{ ps.amount or '' }}" placeholder="Amount">
-                                </div>
-                                <div class="col-2">
-                                    <button type="button" class="btn btn-outline-danger w-100" onclick="this.closest('.petrol-row').remove()"><i class="bi bi-x"></i></button>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        {% else %}
-                        <div class="row g-1 mb-2 petrol-row">
-                            <div class="col-7">
-                                <input type="text" name="petrol_name[]" class="form-control" placeholder="Petrol station name">
-                            </div>
-                            <div class="col-3">
-                                <input type="number" step="0.01" name="petrol_amount[]" class="form-control" placeholder="Amount">
-                            </div>
-                            <div class="col-2">
-                                <button type="button" class="btn btn-outline-danger w-100" onclick="this.closest('.petrol-row').remove()"><i class="bi bi-x"></i></button>
-                            </div>
-                        </div>
-                        {% endif %}
-                    </div>
-                    <button type="button" class="btn btn-sm btn-outline-primary mb-3" onclick="addPetrolRow()"><i class="bi bi-plus-circle me-1"></i> Add Petrol Station</button>
-
-                    <hr class="my-3">
-                    <div class="row g-3">
-                        <div class="col-md-3">
-                            <label class="form-label">Cash</label>
-                            <input type="number" step="0.01" name="cash" class="form-control deduction-field" value="{{ work_order.cash if work_order else '0' }}">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Loading</label>
-                            <input type="number" step="0.01" name="loading" class="form-control deduction-field" value="{{ work_order.loading if work_order else '0' }}">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Total Advance</label>
-                            <input type="number" step="0.01" name="total_advance" class="form-control deduction-field" value="{{ work_order.total_advance if work_order else '0' }}">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Shortage</label>
-                            <input type="number" step="0.01" name="shortage" class="form-control deduction-field" value="{{ work_order.shortage if work_order else '0' }}">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Short Amt</label>
-                            <input type="number" step="0.01" name="short_amt" class="form-control deduction-field" value="{{ work_order.short_amt if work_order else '0' }}">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Munsiyana</label>
-                            <input type="number" step="0.01" name="munsiyana" class="form-control deduction-field" value="{{ work_order.munsiyana if work_order else '0' }}">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">RTGS</label>
-                            <input type="number" step="0.01" name="rtgs" class="form-control deduction-field" value="{{ work_order.rtgs if work_order else '0' }}">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Balance</label>
-                            <input type="text" class="form-control" id="balanceDisplay" value="0" readonly style="font-weight:bold;color:var(--warning);">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Account Name</label>
-                            <input type="text" name="account_name" class="form-control" value="{{ work_order.account_name if work_order else '' }}" placeholder="Beneficiary account name">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Remark</label>
-                            <textarea name="remark" class="form-control" rows="2" placeholder="Any notes...">{{ work_order.remark if work_order else '' }}</textarea>
                         </div>
                     </div>
 
@@ -151,38 +38,23 @@
 </div>
 
 <script>
-function addPetrolRow() {
-    const container = document.getElementById('petrolStationContainer');
-    const row = document.createElement('div');
-    row.className = 'row g-1 mb-2 petrol-row';
-    row.innerHTML = '<div class="col-7"><input type="text" name="petrol_name[]" class="form-control" placeholder="Petrol station name"></div>' +
-                    '<div class="col-3"><input type="number" step="0.01" name="petrol_amount[]" class="form-control" placeholder="Amount"></div>' +
-                    '<div class="col-2"><button type="button" class="btn btn-outline-danger w-100" onclick="this.closest(\'.petrol-row\').remove()"><i class="bi bi-x"></i></button></div>';
-    container.appendChild(row);
-}
-
-function calcFreight() {
-    const qty = parseFloat(document.getElementById('minesQty').value) || 0;
-    const rate = parseFloat(document.getElementById('rate').value) || 0;
-    document.getElementById('totalFreightDisplay').value = (qty * rate).toFixed(2);
-    calcBalance();
-}
-
-function calcBalance() {
-    const freight = parseFloat(document.getElementById('totalFreightDisplay').value) || 0;
-    let deductions = 0;
-    document.querySelectorAll('.deduction-field').forEach(el => {
-        deductions += parseFloat(el.value) || 0;
-    });
-    document.getElementById('balanceDisplay').value = (freight - deductions).toFixed(2);
-}
-
-document.getElementById('minesQty').addEventListener('input', calcFreight);
-document.getElementById('rate').addEventListener('input', calcFreight);
-document.querySelectorAll('.deduction-field').forEach(el => {
-    el.addEventListener('input', calcBalance);
+const woNumberField = document.querySelector('input[name="work_order_number"]');
+const mineSelect = document.querySelector('select[name="mine_id"]');
+{% if not work_order %}
+mineSelect.addEventListener('change', function() {
+    const mineId = this.value;
+    if (mineId) {
+        fetch('/work-orders/next-wo-number/' + mineId)
+            .then(r => r.json())
+            .then(data => {
+                woNumberField.value = data.wo_number;
+                woNumberField.placeholder = 'Suggested: ' + data.wo_number;
+            });
+    } else {
+        woNumberField.value = '';
+        woNumberField.placeholder = 'e.g. RAJ-001';
+    }
 });
-
-calcFreight();
+{% endif %}
 </script>
 {% endblock %}
