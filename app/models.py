@@ -27,10 +27,14 @@ class Transporter(db.Model):
     bank_account = db.Column(db.String(50), nullable=True)
     ifsc_code = db.Column(db.String(20), nullable=True)
     contact = db.Column(db.String(20), nullable=True)
+    tds_rate = db.Column(db.Numeric(5, 2), default=0, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     trips = db.relationship("Trip", backref="transporter", lazy=True)
+
+    def __repr__(self):
+        return f"<Transporter {self.name} (TDS: {self.tds_rate}%)>"
 
     def to_dict(self):
         return {
@@ -40,6 +44,7 @@ class Transporter(db.Model):
             "bank_account": self.bank_account,
             "ifsc_code": self.ifsc_code,
             "contact": self.contact,
+            "tds_rate": float(self.tds_rate),
         }
 
 
