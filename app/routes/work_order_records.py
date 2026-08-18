@@ -473,6 +473,15 @@ def save_wo(id):
             else:
                 setattr(wo, field, str(value).strip() if value else None)
 
+        # Handle TDS auto-calculation
+        if wo.tds_auto and any(f in data for f in ["date", "mines_qty", "rate", "mine_id"]):
+            wo.total_freight = round(float(wo.mines_qty or 0) * float(wo.rate or 0), 2)
+            from app.models import calculate_tds
+            wo.tds = calculate_tds(wo, wo.transporter)
+
+        if "tds" in data:
+            wo.tds_auto = False
+
         wo.recalculate()
         db.session.commit()
         return jsonify({
@@ -482,6 +491,7 @@ def save_wo(id):
             "shortage": float(wo.shortage or 0),
             "balance": float(wo.balance or 0),
             "status": wo.status,
+            "tds": float(wo.tds or 0),
         })
     except Exception as e:
         db.session.rollback()
