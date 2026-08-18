@@ -26,3 +26,9 @@ class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret")
     ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
     ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
+
+    TDS_EXEMPTION_PERIODS = [
+        {"start": "2026-04-01", "end": "2027-03-31"},  # FY 2026-27
+        {"start": "2025-04-01", "end": "2026-03-31"},  # FY 2025-26
+        {"start": "2024-04-01", "end": "2025-03-31"},  # FY 2024-25
+    ]
