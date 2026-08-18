@@ -201,6 +201,7 @@ class WorkOrder(db.Model):
     lorry_number = db.Column(db.String(50), nullable=False, index=True)
     mine_id = db.Column(db.Integer, db.ForeignKey("mines.id"), nullable=True, index=True)
     tds = db.Column(db.Numeric(12, 2), nullable=False, default=0.00)
+    tds_auto = db.Column(db.Boolean, default=True, nullable=False)
     ddtds = db.Column(db.Date, nullable=True)
     ddtds_from = db.Column(db.Date, nullable=True)
     ddtds_to = db.Column(db.Date, nullable=True)
