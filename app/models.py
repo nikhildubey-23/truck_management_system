@@ -257,10 +257,17 @@ class WorkOrder(db.Model):
     parent = db.relationship("WorkOrder", remote_side=[id], backref="children")
 
     def recalculate(self):
+        from app.models import calculate_tds
+
         self.total_freight = round(float(self.mines_qty or 0) * float(self.rate or 0), 2)
         self.shortage = round(float(self.mines_qty or 0) - float(self.plant_qty or 0), 2)
         petrol_total = sum(float(ps.amount or 0) for ps in self.petrol_stations)
         self.total_advance = round(float(self.cash or 0) + petrol_total + float(self.loading or 0), 2)
+
+        if self.tds_auto:
+            transporter = self.mine.plant.transporter if self.mine and self.mine.plant else None
+            self.tds = calculate_tds(self, transporter)
+
         deductions = (
             float(self.total_advance or 0)
             + float(self.short_amt or 0)
