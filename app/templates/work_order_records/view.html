@@ -202,7 +202,7 @@
             <td class="excel-td computed num" data-col="12" data-field="total_freight" data-value="{{ wo.total_freight or 0 }}">{{ "%.0f"|format(wo.total_freight or 0) }}</td>
             <td class="excel-td editable num" data-col="13" data-field="cash" data-value="{{ wo.cash or 0 }}" data-type="number">{{ "%.0f"|format(wo.cash or 0) }}</td>
             <td class="excel-td editable num" data-col="14" data-field="loading" data-value="{{ wo.loading or 0 }}" data-type="number">{{ "%.0f"|format(wo.loading or 0) }}</td>
-            <td class="excel-td editable" data-col="15" data-field="petrol" data-value="{{ wo.petrol_stations|map(attribute='amount')|sum|round(0)|int }}">{{ wo.petrol_stations|map(attribute='amount')|sum|round(0)|int }}</td>
+            <td class="excel-td petrol-cell" data-col="15" data-field="petrol" data-value="{{ wo.petrol_stations|map(attribute='amount')|sum|round(0)|int }}" title="Click to edit petrol">{% for ps in wo.petrol_stations %}{{ ps.name }}: ₹{{ "%.0f"|format(ps.amount) }}{% if not loop.last %}<br>{% endif %}{% endfor %}{% if wo.petrol_stations|length == 0 %}—{% endif %}</td>
             <td class="excel-td computed num" data-col="16" data-field="total_advance" data-value="{{ wo.total_advance or 0 }}">{{ "%.0f"|format(wo.total_advance or 0) }}</td>
             <td class="excel-td computed num" data-col="17" data-field="shortage" data-value="{{ wo.shortage or 0 }}">{{ "%.1f"|format(wo.shortage or 0) }}</td>
             <td class="excel-td editable num" data-col="18" data-field="short_amt" data-value="{{ wo.short_amt or 0 }}" data-type="number">{{ "%.0f"|format(wo.short_amt or 0) }}</td>
@@ -663,7 +663,7 @@ function addRow() {
             <td class="excel-td computed num" data-col="12" data-field="total_freight" data-value="0">0</td>
             <td class="excel-td editable num" data-col="13" data-field="cash" data-value="0" data-type="number">0</td>
             <td class="excel-td editable num" data-col="14" data-field="loading" data-value="0" data-type="number">0</td>
-            <td class="excel-td petrol-cell editable" data-col="15" data-field="petrol" data-value="0" data-type="petrol">0</td>
+            <td class="excel-td petrol-cell" data-col="15" data-field="petrol" data-value="0" title="Click to edit petrol">—</td>
             <td class="excel-td computed num" data-col="16" data-field="total_advance" data-value="0">0</td>
             <td class="excel-td computed num" data-col="17" data-field="shortage" data-value="0">0</td>
             <td class="excel-td editable num" data-col="18" data-field="short_amt" data-value="0" data-type="number">0</td>
@@ -1070,12 +1070,15 @@ function refreshPetrolCell() {
     if (!cell) return;
     const rows = document.querySelectorAll('.petrol-popup .pp-row');
     let parts = [];
+    let total = 0;
     rows.forEach(r => {
         const name = r.querySelector('.pp-name').value.trim();
-        const amt = r.querySelector('.pp-amt').value || 0;
-        if (name) parts.push(name + ':' + parseFloat(amt).toFixed(0));
+        const amt = parseFloat(r.querySelector('.pp-amt').value) || 0;
+        total += amt;
+        if (name) parts.push(name + ': ₹' + amt.toFixed(0));
     });
-    cell.textContent = parts.join(', ');
+    cell.innerHTML = parts.length > 0 ? parts.join('<br>') : '—';
+    cell.dataset.value = total;
 }
 
 function addPetrolPopupRow(woId) {
