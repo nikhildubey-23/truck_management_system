@@ -228,6 +228,7 @@ class WorkOrder(db.Model):
     date = db.Column(db.Date, nullable=False, index=True)
     lorry_number = db.Column(db.String(50), nullable=False, index=True)
     mine_id = db.Column(db.Integer, db.ForeignKey("mines.id"), nullable=True, index=True)
+    transporter_id = db.Column(db.Integer, db.ForeignKey("transporters.id"), nullable=True, index=True)
     tds = db.Column(db.Numeric(12, 2), nullable=False, default=0.00)
     tds_auto = db.Column(db.Boolean, default=True, nullable=False)
     ddtds = db.Column(db.Date, nullable=True)
@@ -253,6 +254,7 @@ class WorkOrder(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     mine = db.relationship("Mine", backref="work_orders")
+    transporter = db.relationship("Transporter", backref="work_orders")
     petrol_stations = db.relationship("PetrolStation", backref="work_order", lazy=True, cascade="all, delete-orphan")
     parent = db.relationship("WorkOrder", remote_side=[id], backref="children")
 
@@ -265,7 +267,7 @@ class WorkOrder(db.Model):
         self.total_advance = round(float(self.cash or 0) + petrol_total + float(self.loading or 0), 2)
 
         if self.tds_auto:
-            transporter = self.mine.plant.transporter if self.mine and self.mine.plant else None
+            transporter = self.transporter if self.transporter else None
             self.tds = calculate_tds(self, transporter)
 
         deductions = (
