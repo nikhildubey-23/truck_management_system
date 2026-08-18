@@ -1,6 +1,8 @@
-from datetime import datetime
+from datetime import date, datetime
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask import current_app
+
 from app import db
 
 
@@ -190,6 +192,32 @@ class Mine(db.Model):
             "plant_id": self.plant_id,
             "plant_name": self.plant.name if self.plant else "",
         }
+
+
+def calculate_tds(work_order, transporter=None):
+    """
+    Calculate TDS for a work order based on date and transporter rate.
+
+    Rules:
+    - If trip date is within exemption period (Apr 1 - Mar 31): TDS = 0
+    - Otherwise: TDS = freight * (transporter.tds_rate / 100)
+    """
+    trip_date = work_order.date
+    if not trip_date:
+        return 0
+
+    exemption_periods = current_app.config.get("TDS_EXEMPTION_PERIODS", [])
+    for period in exemption_periods:
+        start = date.fromisoformat(period["start"])
+        end = date.fromisoformat(period["end"])
+        if start <= trip_date <= end:
+            return 0
+
+    if transporter and transporter.tds_rate:
+        freight = float(work_order.total_freight or 0)
+        return round(freight * (float(transporter.tds_rate) / 100), 2)
+
+    return 0
 
 
 class WorkOrder(db.Model):
