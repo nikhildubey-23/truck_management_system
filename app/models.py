@@ -194,28 +194,27 @@ class Mine(db.Model):
         }
 
 
-def calculate_tds(work_order, transporter=None):
+def calculate_tds(work_order):
     """
-    Calculate TDS for a work order based on date and transporter rate.
+    Calculate TDS for a work order.
 
     Rules:
-    - If trip date is within exemption period (Apr 1 - Mar 31): TDS = 0
-    - Otherwise: TDS = freight * (transporter.tds_rate / 100)
+    - If DD TDS duration > 1 year: TDS = Freight × TDS%
+    - Otherwise: TDS = 0
     """
-    trip_date = work_order.date
-    if not trip_date:
+    from datetime import timedelta
+
+    dd_from = work_order.ddtds_from
+    dd_to = work_order.ddtds_to
+    tds_percent = float(work_order.tds_percent or 0)
+    freight = float(work_order.total_freight or 0)
+
+    if not dd_from or not dd_to or tds_percent <= 0:
         return 0
 
-    exemption_periods = current_app.config.get("TDS_EXEMPTION_PERIODS", [])
-    for period in exemption_periods:
-        start = date.fromisoformat(period["start"])
-        end = date.fromisoformat(period["end"])
-        if start <= trip_date <= end:
-            return 0
-
-    if transporter and transporter.tds_rate:
-        freight = float(work_order.total_freight or 0)
-        return round(freight * (float(transporter.tds_rate) / 100), 2)
+    duration = dd_to - dd_from
+    if duration > timedelta(days=365):
+        return round(freight * (tds_percent / 100), 2)
 
     return 0
 
@@ -231,6 +230,7 @@ class WorkOrder(db.Model):
     transporter_id = db.Column(db.Integer, db.ForeignKey("transporters.id"), nullable=True, index=True)
     tds = db.Column(db.Numeric(12, 2), nullable=False, default=0.00)
     tds_auto = db.Column(db.Boolean, default=True, nullable=False)
+    tds_percent = db.Column(db.Numeric(5, 2), nullable=False, default=0.00)
     ddtds = db.Column(db.Date, nullable=True)
     ddtds_from = db.Column(db.Date, nullable=True)
     ddtds_to = db.Column(db.Date, nullable=True)
@@ -267,8 +267,7 @@ class WorkOrder(db.Model):
         self.total_advance = round(float(self.cash or 0) + petrol_total + float(self.loading or 0), 2)
 
         if self.tds_auto:
-            transporter = self.transporter if self.transporter else None
-            self.tds = calculate_tds(self, transporter)
+            self.tds = calculate_tds(self)
 
         deductions = (
             float(self.total_advance or 0)

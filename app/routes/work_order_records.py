@@ -549,6 +549,8 @@ def save_new_rows():
 @work_order_records_bp.route("/autosave/<int:id>", methods=["POST"])
 @login_required
 def autosave(id):
+    from app.models import calculate_tds
+
     data = request.get_json()
     if not data:
         return jsonify({"ok": False, "error": "No data"}), 400
@@ -562,9 +564,9 @@ def autosave(id):
     editable = {
         "date": "date", "lorry_number": "text", "work_order_number": "text",
         "account_name": "text", "remark": "text", "status": "text",
-        "tds": "number", "account_advance": "number", "mines_qty": "number",
-        "plant_qty": "number", "rate": "number", "cash": "number",
-        "loading": "number",
+        "tds": "number", "tds_percent": "number", "account_advance": "number",
+        "mines_qty": "number", "plant_qty": "number", "rate": "number",
+        "cash": "number", "loading": "number",
         "short_amt": "number", "munsiyana": "number", "rtgs": "number",
         "mine_id": "select", "ddtds_from": "date", "ddtds_to": "date",
     }
@@ -583,10 +585,13 @@ def autosave(id):
         else:
             setattr(wo, field, str(value).strip() if value else None)
 
-        # Handle TDS manual override before recalculate
+        # Handle TDS: manual override or auto-recalculate
         if field == "tds":
             wo.tds = float(value or 0)
             wo.tds_auto = False
+        elif field in ("tds_percent", "ddtds_from", "ddtds_to", "mines_qty", "rate"):
+            wo.tds_auto = True
+            wo.tds = calculate_tds(wo)
 
         wo.recalculate()
         db.session.commit()

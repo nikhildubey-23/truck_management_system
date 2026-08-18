@@ -162,26 +162,26 @@
             <th class="excel-th resize-col" data-col="2">Truck<div class="col-resize-handle" data-col="2"></div></th>
             <th class="excel-th resize-col" data-col="3">Mine<div class="col-resize-handle" data-col="3"></div></th>
             <th class="excel-th resize-col" data-col="4">TDS<div class="col-resize-handle" data-col="4"></div></th>
-            <th class="excel-th resize-col" data-col="5">DD TDS From<div class="col-resize-handle" data-col="5"></div></th>
-            <th class="excel-th resize-col" data-col="6">DD TDS To<div class="col-resize-handle" data-col="6"></div></th>
-            <th class="excel-th resize-col" data-col="7">Acc Adv<div class="col-resize-handle" data-col="7"></div></th>
-            <th class="excel-th resize-col" data-col="8">Mines Qty<div class="col-resize-handle" data-col="8"></div></th>
-            <th class="excel-th resize-col" data-col="9">Plant Qty<div class="col-resize-handle" data-col="9"></div></th>
-            <th class="excel-th resize-col" data-col="10">Rate<div class="col-resize-handle" data-col="10"></div></th>
-            <th class="excel-th resize-col computed" data-col="11">Freight<div class="col-resize-handle" data-col="11"></div></th>
-            <th class="excel-th resize-col" data-col="12">Cash<div class="col-resize-handle" data-col="12"></div></th>
-            <th class="excel-th resize-col" data-col="13">Loading<div class="col-resize-handle" data-col="13"></div></th>
-            <th class="excel-th resize-col" data-col="14">Petrol<div class="col-resize-handle" data-col="14"></div></th>
-            <th class="excel-th resize-col computed" data-col="15">Advance<div class="col-resize-handle" data-col="15"></div></th>
-            <th class="excel-th resize-col computed" data-col="16">Short<div class="col-resize-handle" data-col="16"></div></th>
-            <th class="excel-th resize-col" data-col="17">Short Amt<div class="col-resize-handle" data-col="17"></div></th>
-            <th class="excel-th resize-col" data-col="18">Munsiyana<div class="col-resize-handle" data-col="18"></div></th>
-            <th class="excel-th resize-col" data-col="19">RTGS<div class="col-resize-handle" data-col="19"></div></th>
-            <th class="excel-th resize-col computed" data-col="20">Balance<div class="col-resize-handle" data-col="20"></div></th>
-            <th class="excel-th resize-col" data-col="21">Status<div class="col-resize-handle" data-col="21"></div></th>
-            <th class="excel-th resize-col" data-col="22">Remark<div class="col-resize-handle" data-col="22"></div></th>
-            <th class="excel-th resize-col" data-col="23">Account<div class="col-resize-handle" data-col="23"></div></th>
-            <th class="excel-th resize-col" data-col="24">Actions</th>
+            <th class="excel-th resize-col" data-col="5">TDS %<div class="col-resize-handle" data-col="5"></div></th>
+            <th class="excel-th resize-col" data-col="6">DD TDS From<div class="col-resize-handle" data-col="6"></div></th>
+            <th class="excel-th resize-col" data-col="7">DD TDS To<div class="col-resize-handle" data-col="7"></div></th>
+            <th class="excel-th resize-col" data-col="8">Acc Adv<div class="col-resize-handle" data-col="8"></div></th>
+            <th class="excel-th resize-col" data-col="9">Mines Qty<div class="col-resize-handle" data-col="9"></div></th>
+            <th class="excel-th resize-col" data-col="10">Plant Qty<div class="col-resize-handle" data-col="10"></div></th>
+            <th class="excel-th resize-col" data-col="11">Rate<div class="col-resize-handle" data-col="11"></div></th>
+            <th class="excel-th resize-col computed" data-col="12">Freight<div class="col-resize-handle" data-col="12"></div></th>
+            <th class="excel-th resize-col" data-col="13">Cash<div class="col-resize-handle" data-col="13"></div></th>
+            <th class="excel-th resize-col" data-col="14">Loading<div class="col-resize-handle" data-col="14"></div></th>
+            <th class="excel-th resize-col" data-col="15">Petrol<div class="col-resize-handle" data-col="15"></div></th>
+            <th class="excel-th resize-col computed" data-col="16">Advance<div class="col-resize-handle" data-col="16"></div></th>
+            <th class="excel-th resize-col computed" data-col="17">Short<div class="col-resize-handle" data-col="17"></div></th>
+            <th class="excel-th resize-col" data-col="18">Short Amt<div class="col-resize-handle" data-col="18"></div></th>
+            <th class="excel-th resize-col" data-col="19">Munsiyana<div class="col-resize-handle" data-col="19"></div></th>
+            <th class="excel-th resize-col" data-col="20">RTGS<div class="col-resize-handle" data-col="20"></div></th>
+            <th class="excel-th resize-col computed" data-col="21">Balance<div class="col-resize-handle" data-col="21"></div></th>
+            <th class="excel-th resize-col" data-col="22">Status<div class="col-resize-handle" data-col="22"></div></th>
+            <th class="excel-th resize-col" data-col="23">Remark<div class="col-resize-handle" data-col="23"></div></th>
+            <th class="excel-th resize-col" data-col="24">Account<div class="col-resize-handle" data-col="24"></div></th>
         </tr>
     </thead>
     <tbody id="excelBody">
@@ -192,27 +192,26 @@
             <td class="excel-td editable" data-col="2" data-field="lorry_number" data-value="{{ wo.lorry_number or '' }}">{{ wo.lorry_number or '' }}</td>
             <td class="excel-td editable" data-col="3" data-field="mine_id" data-value="{{ wo.mine_id or '' }}">{{ wo.mine.name if wo.mine else '-' }}</td>
             <td class="excel-td editable num" data-col="4" data-field="tds" data-value="{{ wo.tds or 0 }}" data-type="number">{{ "%.0f"|format(wo.tds or 0) }}</td>
-            <td class="excel-td editable" data-col="5" data-field="ddtds_from" data-value="{{ wo.ddtds_from.isoformat() if wo.ddtds_from else '' }}" data-type="date">{{ wo.ddtds_from.isoformat() if wo.ddtds_from else '' }}</td>
-            <td class="excel-td editable" data-col="6" data-field="ddtds_to" data-value="{{ wo.ddtds_to.isoformat() if wo.ddtds_to else '' }}" data-type="date">{{ wo.ddtds_to.isoformat() if wo.ddtds_to else '' }}</td>
-            <td class="excel-td editable num" data-col="7" data-field="account_advance" data-value="{{ wo.account_advance or 0 }}" data-type="number">{{ "%.0f"|format(wo.account_advance or 0) }}</td>
-            <td class="excel-td editable num" data-col="8" data-field="mines_qty" data-value="{{ wo.mines_qty or 0 }}" data-type="number">{{ "%.1f"|format(wo.mines_qty or 0) }}</td>
-            <td class="excel-td editable num" data-col="9" data-field="plant_qty" data-value="{{ wo.plant_qty or 0 }}" data-type="number">{{ "%.1f"|format(wo.plant_qty or 0) }}</td>
-            <td class="excel-td editable num" data-col="10" data-field="rate" data-value="{{ wo.rate or 0 }}" data-type="number">{{ "%.0f"|format(wo.rate or 0) }}</td>
-            <td class="excel-td computed num" data-col="11" data-field="total_freight" data-value="{{ wo.total_freight or 0 }}">{{ "%.0f"|format(wo.total_freight or 0) }}</td>
-            <td class="excel-td editable num" data-col="12" data-field="cash" data-value="{{ wo.cash or 0 }}" data-type="number">{{ "%.0f"|format(wo.cash or 0) }}</td>
-            <td class="excel-td editable num" data-col="13" data-field="loading" data-value="{{ wo.loading or 0 }}" data-type="number">{{ "%.0f"|format(wo.loading or 0) }}</td>
-            <td class="excel-td petrol-cell" data-col="14" data-value="" onclick="openPetrolEditor(this.closest('tr'))" title="Click to edit petrol">
-                {% for ps in wo.petrol_stations %}{% if not loop.first %}, {% endif %}{{ ps.name }}:{{ "%.0f"|format(ps.amount) }}{% endfor %}
-            </td>
-            <td class="excel-td computed num" data-col="15" data-field="total_advance" data-value="{{ wo.total_advance or 0 }}">{{ "%.0f"|format(wo.total_advance or 0) }}</td>
-            <td class="excel-td computed num" data-col="16" data-field="shortage" data-value="{{ wo.shortage or 0 }}">{{ "%.1f"|format(wo.shortage or 0) }}</td>
-            <td class="excel-td editable num" data-col="17" data-field="short_amt" data-value="{{ wo.short_amt or 0 }}" data-type="number">{{ "%.0f"|format(wo.short_amt or 0) }}</td>
-            <td class="excel-td editable num" data-col="18" data-field="munsiyana" data-value="{{ wo.munsiyana or 300 }}" data-type="number">{{ "%.0f"|format(wo.munsiyana or 300) }}</td>
-            <td class="excel-td editable num" data-col="19" data-field="rtgs" data-value="{{ wo.rtgs or 0 }}" data-type="number">{{ "%.0f"|format(wo.rtgs or 0) }}</td>
-            <td class="excel-td computed num" data-col="20" data-field="balance" data-value="{{ wo.balance or 0 }}" style="font-weight:700;">{{ "%.0f"|format(wo.balance or 0) }}</td>
-            <td class="excel-td" data-col="21" data-value="{{ wo.status }}"><span class="badge-status {{ 'completed' if wo.status == 'Completed' else 'pending' }}" style="font-size:.65rem;">{{ wo.status }}</span></td>
-            <td class="excel-td editable" data-col="22" data-field="remark" data-value="{{ wo.remark or '' }}">{{ wo.remark or '' }}</td>
-            <td class="excel-td editable" data-col="23" data-field="account_name" data-value="{{ wo.account_name or '' }}">{{ wo.account_name or '' }}</td>
+            <td class="excel-td editable num" data-col="5" data-field="tds_percent" data-value="{{ wo.tds_percent or 0 }}" data-type="number">{{ "%.1f"|format(wo.tds_percent or 0) }}</td>
+            <td class="excel-td editable" data-col="6" data-field="ddtds_from" data-value="{{ wo.ddtds_from.isoformat() if wo.ddtds_from else '' }}" data-type="date">{{ wo.ddtds_from.isoformat() if wo.ddtds_from else '' }}</td>
+            <td class="excel-td editable" data-col="7" data-field="ddtds_to" data-value="{{ wo.ddtds_to.isoformat() if wo.ddtds_to else '' }}" data-type="date">{{ wo.ddtds_to.isoformat() if wo.ddtds_to else '' }}</td>
+            <td class="excel-td editable num" data-col="8" data-field="account_advance" data-value="{{ wo.account_advance or 0 }}" data-type="number">{{ "%.0f"|format(wo.account_advance or 0) }}</td>
+            <td class="excel-td editable num" data-col="9" data-field="mines_qty" data-value="{{ wo.mines_qty or 0 }}" data-type="number">{{ "%.1f"|format(wo.mines_qty or 0) }}</td>
+            <td class="excel-td editable num" data-col="10" data-field="plant_qty" data-value="{{ wo.plant_qty or 0 }}" data-type="number">{{ "%.1f"|format(wo.plant_qty or 0) }}</td>
+            <td class="excel-td editable num" data-col="11" data-field="rate" data-value="{{ wo.rate or 0 }}" data-type="number">{{ "%.0f"|format(wo.rate or 0) }}</td>
+            <td class="excel-td computed num" data-col="12" data-field="total_freight" data-value="{{ wo.total_freight or 0 }}">{{ "%.0f"|format(wo.total_freight or 0) }}</td>
+            <td class="excel-td editable num" data-col="13" data-field="cash" data-value="{{ wo.cash or 0 }}" data-type="number">{{ "%.0f"|format(wo.cash or 0) }}</td>
+            <td class="excel-td editable num" data-col="14" data-field="loading" data-value="{{ wo.loading or 0 }}" data-type="number">{{ "%.0f"|format(wo.loading or 0) }}</td>
+            <td class="excel-td editable" data-col="15" data-field="petrol" data-value="{{ wo.petrol_stations|map(attribute='amount')|sum|round(0)|int }}">{{ wo.petrol_stations|map(attribute='amount')|sum|round(0)|int }}</td>
+            <td class="excel-td computed num" data-col="16" data-field="total_advance" data-value="{{ wo.total_advance or 0 }}">{{ "%.0f"|format(wo.total_advance or 0) }}</td>
+            <td class="excel-td computed num" data-col="17" data-field="shortage" data-value="{{ wo.shortage or 0 }}">{{ "%.1f"|format(wo.shortage or 0) }}</td>
+            <td class="excel-td editable num" data-col="18" data-field="short_amt" data-value="{{ wo.short_amt or 0 }}" data-type="number">{{ "%.0f"|format(wo.short_amt or 0) }}</td>
+            <td class="excel-td editable num" data-col="19" data-field="munsiyana" data-value="{{ wo.munsiyana or 300 }}" data-type="number">{{ "%.0f"|format(wo.munsiyana or 300) }}</td>
+            <td class="excel-td editable num" data-col="20" data-field="rtgs" data-value="{{ wo.rtgs or 0 }}" data-type="number">{{ "%.0f"|format(wo.rtgs or 0) }}</td>
+            <td class="excel-td computed num" data-col="21" data-field="balance" data-value="{{ wo.balance or 0 }}"><strong>{{ "%.0f"|format(wo.balance or 0) }}</strong></td>
+            <td class="excel-td" data-col="22"><span class="badge-status {{ 'completed' if wo.balance <= 0 else 'pending' }}">{{ wo.status }}</span></td>
+            <td class="excel-td editable" data-col="23" data-field="remark" data-value="{{ wo.remark or '' }}">{{ wo.remark or '' }}</td>
+            <td class="excel-td editable" data-col="24" data-field="account_name" data-value="{{ wo.account_name or '' }}">{{ wo.account_name or '' }}</td>
             <td class="excel-td no-print" data-col="24" style="white-space:nowrap;">
                 <button type="button" class="excel-action-btn" title="Edit row" onclick="var r=this.closest('tr'); var cell=r.querySelector('.editable'); if(cell){startEdit(cell);}"><i class="bi bi-pencil"></i></button>
                 <button type="button" class="excel-action-btn" title="Petrol stations" onclick="openPetrolEditor(this.closest('tr'))"><i class="bi bi-fuel-pump"></i></button>
@@ -654,25 +653,26 @@ function addRow() {
             <td class="excel-td editable" data-col="2" data-field="lorry_number" data-value="-">-</td>
             <td class="excel-td editable" data-col="3" data-field="mine_id" data-value="${mineId}">${mineName}</td>
             <td class="excel-td editable num" data-col="4" data-field="tds" data-value="0" data-type="number">0</td>
-            <td class="excel-td editable" data-col="5" data-field="ddtds_from" data-value="" data-type="date"></td>
-            <td class="excel-td editable" data-col="6" data-field="ddtds_to" data-value="" data-type="date"></td>
-            <td class="excel-td editable num" data-col="7" data-field="account_advance" data-value="0" data-type="number">0</td>
-            <td class="excel-td editable num" data-col="8" data-field="mines_qty" data-value="0" data-type="number">0</td>
-            <td class="excel-td editable num" data-col="9" data-field="plant_qty" data-value="0" data-type="number">0</td>
-            <td class="excel-td editable num" data-col="10" data-field="rate" data-value="0" data-type="number">0</td>
-            <td class="excel-td computed num" data-col="11" data-field="total_freight" data-value="0">0</td>
-            <td class="excel-td editable num" data-col="12" data-field="cash" data-value="0" data-type="number">0</td>
-            <td class="excel-td editable num" data-col="13" data-field="loading" data-value="0" data-type="number">0</td>
-            <td class="excel-td petrol-cell" data-col="14" data-value="" onclick="openPetrolEditor(this.closest('tr'))" title="Click to edit petrol"></td>
-            <td class="excel-td computed num" data-col="15" data-field="total_advance" data-value="0">0</td>
-            <td class="excel-td computed num" data-col="16" data-field="shortage" data-value="0">0</td>
-            <td class="excel-td editable num" data-col="17" data-field="short_amt" data-value="0" data-type="number">0</td>
-            <td class="excel-td editable num" data-col="18" data-field="munsiyana" data-value="300" data-type="number">300</td>
-            <td class="excel-td editable num" data-col="19" data-field="rtgs" data-value="0" data-type="number">0</td>
-            <td class="excel-td computed num" data-col="20" data-field="balance" data-value="0" style="font-weight:700;">0</td>
-            <td class="excel-td" data-col="21" data-value="Pending"><span class="badge-status pending" style="font-size:.65rem;">Pending</span></td>
-            <td class="excel-td editable" data-col="22" data-field="remark" data-value=""></td>
-            <td class="excel-td editable" data-col="23" data-field="account_name" data-value=""></td>
+            <td class="excel-td editable num" data-col="5" data-field="tds_percent" data-value="0" data-type="number">0.0</td>
+            <td class="excel-td editable" data-col="6" data-field="ddtds_from" data-value="" data-type="date"></td>
+            <td class="excel-td editable" data-col="7" data-field="ddtds_to" data-value="" data-type="date"></td>
+            <td class="excel-td editable num" data-col="8" data-field="account_advance" data-value="0" data-type="number">0</td>
+            <td class="excel-td editable num" data-col="9" data-field="mines_qty" data-value="0" data-type="number">0</td>
+            <td class="excel-td editable num" data-col="10" data-field="plant_qty" data-value="0" data-type="number">0</td>
+            <td class="excel-td editable num" data-col="11" data-field="rate" data-value="0" data-type="number">0</td>
+            <td class="excel-td computed num" data-col="12" data-field="total_freight" data-value="0">0</td>
+            <td class="excel-td editable num" data-col="13" data-field="cash" data-value="0" data-type="number">0</td>
+            <td class="excel-td editable num" data-col="14" data-field="loading" data-value="0" data-type="number">0</td>
+            <td class="excel-td petrol-cell editable" data-col="15" data-field="petrol" data-value="0" data-type="petrol">0</td>
+            <td class="excel-td computed num" data-col="16" data-field="total_advance" data-value="0">0</td>
+            <td class="excel-td computed num" data-col="17" data-field="shortage" data-value="0">0</td>
+            <td class="excel-td editable num" data-col="18" data-field="short_amt" data-value="0" data-type="number">0</td>
+            <td class="excel-td editable num" data-col="19" data-field="munsiyana" data-value="300" data-type="number">300</td>
+            <td class="excel-td editable num" data-col="20" data-field="rtgs" data-value="0" data-type="number">0</td>
+            <td class="excel-td computed num balance-cell" data-col="21" data-field="balance" data-value="0"><strong>0</strong></td>
+            <td class="excel-td" data-col="22"><span class="badge-status pending">Pending</span></td>
+            <td class="excel-td editable" data-col="23" data-field="remark" data-value=""></td>
+            <td class="excel-td editable" data-col="24" data-field="account_name" data-value=""></td>
             <td class="excel-td no-print" data-col="24" style="white-space:nowrap;">
                 <button type="button" class="excel-action-btn" title="Edit row" onclick="var r=this.closest('tr'); var cell=r.querySelector('.editable'); if(cell){startEdit(cell);}"><i class="bi bi-pencil"></i></button>
                 <button type="button" class="excel-action-btn" title="Petrol stations" onclick="openPetrolEditor(this.closest('tr'))"><i class="bi bi-fuel-pump"></i></button>

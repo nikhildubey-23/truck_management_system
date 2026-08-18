@@ -105,9 +105,7 @@
             <div class="wo-card-actions">
                 <a href="{{ url_for('work_order_records.view', id=wo.id) }}" class="btn btn-sm btn-outline-info" title="View"><i class="bi bi-eye"></i></a>
                 <a href="{{ url_for('work_order_records.edit', id=wo.id) }}" class="btn btn-sm btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
-                <form method="POST" action="{{ url_for('work_order_records.delete', id=wo.id) }}" style="display:inline;" onsubmit="return confirm('Delete this work order?')">
-                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete"><i class="bi bi-trash"></i></button>
-                </form>
+                <button type="button" class="btn btn-sm btn-outline-danger" title="Delete" onclick="deleteWO({{ wo.id }})"><i class="bi bi-trash"></i></button>
             </div>
         </div>
         {% endfor %}
@@ -126,6 +124,12 @@
 
 {% block scripts %}
 <script>
+function deleteWO(id) {
+    if (!confirm('Delete this work order?')) return;
+    fetch('/work-orders/delete/' + id, { method: 'POST' })
+    .then(function() { window.location.reload(); });
+}
+
 function runAISearch() {
     var input = document.getElementById('aiSearchInput');
     var query = input.value.trim();
