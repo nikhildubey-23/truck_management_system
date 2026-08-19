@@ -175,13 +175,14 @@
             <th class="excel-th resize-col" data-col="15">Petrol<div class="col-resize-handle" data-col="15"></div></th>
             <th class="excel-th resize-col computed" data-col="16">Advance<div class="col-resize-handle" data-col="16"></div></th>
             <th class="excel-th resize-col computed" data-col="17">Short<div class="col-resize-handle" data-col="17"></div></th>
-            <th class="excel-th resize-col" data-col="18">Short Amt<div class="col-resize-handle" data-col="18"></div></th>
-            <th class="excel-th resize-col" data-col="19">Munsiyana<div class="col-resize-handle" data-col="19"></div></th>
-            <th class="excel-th resize-col" data-col="20">RTGS<div class="col-resize-handle" data-col="20"></div></th>
-            <th class="excel-th resize-col computed" data-col="21">Balance<div class="col-resize-handle" data-col="21"></div></th>
-            <th class="excel-th resize-col" data-col="22">Status<div class="col-resize-handle" data-col="22"></div></th>
-            <th class="excel-th resize-col" data-col="23">Remark<div class="col-resize-handle" data-col="23"></div></th>
-            <th class="excel-th resize-col" data-col="24">Account<div class="col-resize-handle" data-col="24"></div></th>
+            <th class="excel-th resize-col computed" data-col="18">Short Amt<div class="col-resize-handle" data-col="18"></div></th>
+            <th class="excel-th resize-col" data-col="19">Short Rate<div class="col-resize-handle" data-col="19"></div></th>
+            <th class="excel-th resize-col" data-col="20">Munsiyana<div class="col-resize-handle" data-col="20"></div></th>
+            <th class="excel-th resize-col" data-col="21">RTGS<div class="col-resize-handle" data-col="21"></div></th>
+            <th class="excel-th resize-col computed" data-col="22">Balance<div class="col-resize-handle" data-col="22"></div></th>
+            <th class="excel-th resize-col" data-col="23">Status<div class="col-resize-handle" data-col="23"></div></th>
+            <th class="excel-th resize-col" data-col="24">Remark<div class="col-resize-handle" data-col="24"></div></th>
+            <th class="excel-th resize-col" data-col="25">Account<div class="col-resize-handle" data-col="25"></div></th>
         </tr>
     </thead>
     <tbody id="excelBody">
@@ -205,13 +206,14 @@
             <td class="excel-td petrol-cell" data-col="15" data-field="petrol" data-value="{{ wo.petrol_stations|map(attribute='amount')|sum|round(0)|int }}" title="Click to edit petrol">{% for ps in wo.petrol_stations %}{{ ps.name }}: ₹{{ "%.0f"|format(ps.amount) }}{% if not loop.last %}<br>{% endif %}{% endfor %}{% if wo.petrol_stations|length == 0 %}—{% endif %}</td>
             <td class="excel-td computed num" data-col="16" data-field="total_advance" data-value="{{ wo.total_advance or 0 }}">{{ "%.0f"|format(wo.total_advance or 0) }}</td>
             <td class="excel-td computed num" data-col="17" data-field="shortage" data-value="{{ wo.shortage or 0 }}">{{ "%.1f"|format(wo.shortage or 0) }}</td>
-            <td class="excel-td editable num" data-col="18" data-field="short_amt" data-value="{{ wo.short_amt or 0 }}" data-type="number">{{ "%.0f"|format(wo.short_amt or 0) }}</td>
-            <td class="excel-td editable num" data-col="19" data-field="munsiyana" data-value="{{ wo.munsiyana or 300 }}" data-type="number">{{ "%.0f"|format(wo.munsiyana or 300) }}</td>
-            <td class="excel-td editable num" data-col="20" data-field="rtgs" data-value="{{ wo.rtgs or 0 }}" data-type="number">{{ "%.0f"|format(wo.rtgs or 0) }}</td>
-            <td class="excel-td computed num" data-col="21" data-field="balance" data-value="{{ wo.balance or 0 }}"><strong>{{ "%.0f"|format(wo.balance or 0) }}</strong></td>
-            <td class="excel-td" data-col="22"><span class="badge-status {{ 'completed' if wo.balance <= 0 else 'pending' }}">{{ wo.status }}</span></td>
-            <td class="excel-td editable" data-col="23" data-field="remark" data-value="{{ wo.remark or '' }}">{{ wo.remark or '' }}</td>
-            <td class="excel-td editable" data-col="24" data-field="account_name" data-value="{{ wo.account_name or '' }}">{{ wo.account_name or '' }}</td>
+            <td class="excel-td computed num" data-col="18" data-field="short_amt" data-value="{{ wo.short_amt or 0 }}">{{ "%.0f"|format(wo.short_amt or 0) }}</td>
+            <td class="excel-td editable num" data-col="19" data-field="short_rate" data-value="{{ wo.short_rate or 10000 }}" data-type="number">{{ "%.0f"|format(wo.short_rate or 10000) }}</td>
+            <td class="excel-td editable num" data-col="20" data-field="munsiyana" data-value="{{ wo.munsiyana or 300 }}" data-type="number">{{ "%.0f"|format(wo.munsiyana or 300) }}</td>
+            <td class="excel-td editable num" data-col="21" data-field="rtgs" data-value="{{ wo.rtgs or 0 }}" data-type="number">{{ "%.0f"|format(wo.rtgs or 0) }}</td>
+            <td class="excel-td computed num" data-col="22" data-field="balance" data-value="{{ wo.balance or 0 }}"><strong>{{ "%.0f"|format(wo.balance or 0) }}</strong></td>
+            <td class="excel-td" data-col="23"><span class="badge-status {{ 'completed' if wo.balance <= 0 else 'pending' }}">{{ wo.status }}</span></td>
+            <td class="excel-td editable" data-col="24" data-field="remark" data-value="{{ wo.remark or '' }}">{{ wo.remark or '' }}</td>
+            <td class="excel-td editable" data-col="25" data-field="account_name" data-value="{{ wo.account_name or '' }}">{{ wo.account_name or '' }}</td>
             <td class="excel-td no-print" data-col="24" style="white-space:nowrap;">
                 <button type="button" class="excel-action-btn" title="Edit row" onclick="var r=this.closest('tr'); var cell=r.querySelector('.editable'); if(cell){startEdit(cell);}"><i class="bi bi-pencil"></i></button>
                 <button type="button" class="excel-action-btn" title="Petrol stations" onclick="openPetrolEditor(this.closest('tr'))"><i class="bi bi-fuel-pump"></i></button>
@@ -665,14 +667,15 @@ function addRow() {
             <td class="excel-td editable num" data-col="14" data-field="loading" data-value="0" data-type="number">0</td>
             <td class="excel-td petrol-cell" data-col="15" data-field="petrol" data-value="0" title="Click to edit petrol">—</td>
             <td class="excel-td computed num" data-col="16" data-field="total_advance" data-value="0">0</td>
-            <td class="excel-td computed num" data-col="17" data-field="shortage" data-value="0">0</td>
-            <td class="excel-td editable num" data-col="18" data-field="short_amt" data-value="0" data-type="number">0</td>
-            <td class="excel-td editable num" data-col="19" data-field="munsiyana" data-value="300" data-type="number">300</td>
-            <td class="excel-td editable num" data-col="20" data-field="rtgs" data-value="0" data-type="number">0</td>
-            <td class="excel-td computed num balance-cell" data-col="21" data-field="balance" data-value="0"><strong>0</strong></td>
-            <td class="excel-td" data-col="22"><span class="badge-status pending">Pending</span></td>
-            <td class="excel-td editable" data-col="23" data-field="remark" data-value=""></td>
-            <td class="excel-td editable" data-col="24" data-field="account_name" data-value=""></td>
+            <td class="excel-td computed num" data-col="17" data-field="shortage" data-value="0">0.0</td>
+            <td class="excel-td computed num" data-col="18" data-field="short_amt" data-value="0">0</td>
+            <td class="excel-td editable num" data-col="19" data-field="short_rate" data-value="10000" data-type="number">10000</td>
+            <td class="excel-td editable num" data-col="20" data-field="munsiyana" data-value="300" data-type="number">300</td>
+            <td class="excel-td editable num" data-col="21" data-field="rtgs" data-value="0" data-type="number">0</td>
+            <td class="excel-td computed num balance-cell" data-col="22" data-field="balance" data-value="0"><strong>0</strong></td>
+            <td class="excel-td" data-col="23"><span class="badge-status pending">Pending</span></td>
+            <td class="excel-td editable" data-col="24" data-field="remark" data-value=""></td>
+            <td class="excel-td editable" data-col="25" data-field="account_name" data-value=""></td>
             <td class="excel-td no-print" data-col="24" style="white-space:nowrap;">
                 <button type="button" class="excel-action-btn" title="Edit row" onclick="var r=this.closest('tr'); var cell=r.querySelector('.editable'); if(cell){startEdit(cell);}"><i class="bi bi-pencil"></i></button>
                 <button type="button" class="excel-action-btn" title="Petrol stations" onclick="openPetrolEditor(this.closest('tr'))"><i class="bi bi-fuel-pump"></i></button>
@@ -735,7 +738,7 @@ function saveRow() {
             if (data.ok) {
                 const freightTd = row.querySelector('[data-field="total_freight"]');
                 const balanceTd = row.querySelector('[data-field="balance"]');
-                const statusTd = row.querySelector('[data-col="22"] span');
+                const statusTd = row.querySelector('[data-col="23"] span');
                 if (freightTd) { freightTd.dataset.value = data.total_freight; freightTd.textContent = parseFloat(data.total_freight).toLocaleString('en-IN', {maximumFractionDigits:0}); }
                 if (balanceTd) { balanceTd.dataset.value = data.balance; balanceTd.textContent = parseFloat(data.balance).toLocaleString('en-IN', {maximumFractionDigits:0}); }
                 if (statusTd) { statusTd.textContent = data.status; statusTd.className = 'badge-status ' + (data.status === 'Completed' ? 'completed' : 'pending'); }
@@ -767,12 +770,14 @@ function autosaveField(td, woId, field, value) {
                     const freightTd = row.querySelector('[data-field="total_freight"]');
                     const advanceTd = row.querySelector('[data-field="total_advance"]');
                     const shortageTd = row.querySelector('[data-field="shortage"]');
+                    const shortAmtTd = row.querySelector('[data-field="short_amt"]');
                     const balanceTd = row.querySelector('[data-field="balance"]');
                     const tdsTd = row.querySelector('[data-field="tds"]');
-                    const statusTd = row.querySelector('[data-col="21"] span');
+                    const statusTd = row.querySelector('[data-col="23"] span');
                     if (freightTd) { freightTd.dataset.value = data.total_freight; freightTd.textContent = parseFloat(data.total_freight).toLocaleString('en-IN', {maximumFractionDigits:0}); }
                     if (advanceTd && data.total_advance !== undefined) { advanceTd.dataset.value = data.total_advance; advanceTd.textContent = parseFloat(data.total_advance).toLocaleString('en-IN', {maximumFractionDigits:0}); }
                     if (shortageTd && data.shortage !== undefined) { shortageTd.dataset.value = data.shortage; shortageTd.textContent = parseFloat(data.shortage).toLocaleString('en-IN', {maximumFractionDigits:1}); }
+                    if (shortAmtTd && data.short_amt !== undefined) { shortAmtTd.dataset.value = data.short_amt; shortAmtTd.textContent = parseFloat(data.short_amt).toLocaleString('en-IN', {maximumFractionDigits:0}); }
                     if (balanceTd) { balanceTd.dataset.value = data.balance; balanceTd.textContent = parseFloat(data.balance).toLocaleString('en-IN', {maximumFractionDigits:0}); }
                     if (tdsTd && data.tds !== undefined) { tdsTd.dataset.value = data.tds; tdsTd.textContent = parseFloat(data.tds).toLocaleString('en-IN', {maximumFractionDigits:0}); }
                     if (statusTd) {

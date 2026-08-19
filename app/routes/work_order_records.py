@@ -454,23 +454,21 @@ def save_wo(id):
         "tds": "number", "account_advance": "number", "mines_qty": "number",
         "plant_qty": "number", "rate": "number", "cash": "number",
         "loading": "number",
-        "short_amt": "number", "munsiyana": "number", "rtgs": "number",
+        "short_amt": "number", "short_rate": "number", "munsiyana": "number",
+        "rtgs": "number",
         "mine_id": "select", "ddtds_from": "date", "ddtds_to": "date",
     }
 
     try:
-        for field, value in data.items():
-            if field not in editable:
-                continue
-            ftype = editable[field]
-            if ftype == "date":
-                setattr(wo, field, datetime.strptime(value, "%Y-%m-%d").date() if value else None)
-            elif ftype == "number":
-                setattr(wo, field, float(value or 0))
-            elif ftype == "select":
-                setattr(wo, field, int(value) if value else None)
-            else:
-                setattr(wo, field, str(value).strip() if value else None)
+        ftype = editable[field]
+        if ftype == "date":
+            setattr(wo, field, datetime.strptime(value, "%Y-%m-%d").date() if value else None)
+        elif ftype == "number":
+            setattr(wo, field, float(value or 0))
+        elif ftype == "select":
+            setattr(wo, field, int(value) if value else None)
+        else:
+            setattr(wo, field, str(value).strip() if value else None)
 
         # Handle TDS auto-calculation
         if wo.tds_auto and any(f in data for f in ["date", "mines_qty", "rate", "mine_id"]):
@@ -510,7 +508,8 @@ def save_new_rows():
         "tds": "number", "account_advance": "number", "mines_qty": "number",
         "plant_qty": "number", "rate": "number", "cash": "number",
         "loading": "number",
-        "short_amt": "number", "munsiyana": "number", "rtgs": "number",
+        "short_amt": "number", "short_rate": "number", "munsiyana": "number",
+        "rtgs": "number",
         "mine_id": "select", "ddtds_from": "date", "ddtds_to": "date",
     }
 
@@ -566,7 +565,8 @@ def autosave(id):
         "tds": "number", "tds_percent": "number", "account_advance": "number",
         "mines_qty": "number", "plant_qty": "number", "rate": "number",
         "cash": "number", "loading": "number",
-        "short_amt": "number", "munsiyana": "number", "rtgs": "number",
+        "short_amt": "number", "short_rate": "number", "munsiyana": "number",
+        "rtgs": "number",
         "mine_id": "select", "ddtds_from": "date", "ddtds_to": "date",
     }
 
@@ -603,6 +603,7 @@ def autosave(id):
             "total_freight": float(wo.total_freight or 0),
             "total_advance": float(wo.total_advance or 0),
             "shortage": float(wo.shortage or 0),
+            "short_amt": float(wo.short_amt or 0),
             "balance": float(wo.balance or 0),
             "tds": float(wo.tds or 0),
             "status": wo.status,

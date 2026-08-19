@@ -244,6 +244,7 @@ class WorkOrder(db.Model):
     total_advance = db.Column(db.Numeric(12, 2), nullable=False, default=0.00)
     shortage = db.Column(db.Numeric(12, 2), nullable=False, default=0.00)
     short_amt = db.Column(db.Numeric(12, 2), nullable=False, default=0.00)
+    short_rate = db.Column(db.Numeric(12, 2), nullable=False, default=10000.00)
     munsiyana = db.Column(db.Numeric(12, 2), nullable=False, default=0.00)
     balance = db.Column(db.Numeric(12, 2), nullable=False, default=0.00)
     rtgs = db.Column(db.Numeric(12, 2), nullable=False, default=0.00)
@@ -261,8 +262,9 @@ class WorkOrder(db.Model):
     def recalculate(self):
         from app.models import calculate_tds
 
-        self.total_freight = round(float(self.mines_qty or 0) * float(self.rate or 0), 2)
-        self.shortage = round(float(self.mines_qty or 0) - float(self.plant_qty or 0), 2)
+        self.total_freight = round(float(self.plant_qty or 0) * float(self.rate or 0), 2)
+        self.shortage = round(float(self.plant_qty or 0) - float(self.mines_qty or 0), 2)
+        self.short_amt = round(float(self.shortage or 0) * float(self.short_rate or 10000), 2)
         petrol_total = sum(float(ps.amount or 0) for ps in self.petrol_stations)
         self.total_advance = round(float(self.cash or 0) + petrol_total + float(self.loading or 0), 2)
 
