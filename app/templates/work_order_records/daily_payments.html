@@ -46,7 +46,7 @@
                     <th rowspan="2">#</th>
                     <th rowspan="2">WO</th>
                     <th rowspan="2">Lorry</th>
-                    <th rowspan="2">Account</th>
+                    <th rowspan="2">Account Name</th>
                     <th rowspan="2">Mine</th>
                     <th rowspan="2" style="min-width:90px;">DD TDS From</th>
                     <th rowspan="2" style="min-width:90px;">DD TDS To</th>
@@ -63,6 +63,7 @@
                     <th class="text-end" style="min-width:80px;">Total Deduct</th>
                     <th class="text-end text-primary" style="min-width:75px;"><strong>Net</strong></th>
                     <th class="text-end text-success" style="min-width:65px;"><strong>RTGS</strong></th>
+                    <th style="min-width:70px;"></th>
                 </tr>
             </thead>
             <tbody>
@@ -93,6 +94,13 @@
                         {% if diff != 0 %}
                         <br><small class="text-danger">({{ "%+0.0f"|format(diff) }})</small>
                         {% endif %}
+                    </td>
+                    <td class="text-nowrap">
+                        <a href="{{ url_for('work_order_records.view', id=e.id) }}" class="btn btn-outline-primary btn-sm py-0 px-1" title="View/Edit"><i class="bi bi-pencil-square"></i></a>
+                        <form method="POST" action="{{ url_for('work_order_records.delete', id=e.id) }}" class="d-inline" onsubmit="return confirm('Delete this payment entry?')">
+                            <input type="hidden" name="redirect" value="daily-payments">
+                            <button type="submit" class="btn btn-outline-danger btn-sm py-0 px-1" title="Delete"><i class="bi bi-trash"></i></button>
+                        </form>
                     </td>
                 </tr>
                 {% endfor %}
@@ -205,8 +213,12 @@
                             <input type="number" step="0.01" name="tds" class="form-control form-control-sm" value="0">
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label small">DD TDS Date</label>
-                            <input type="date" name="ddtds" class="form-control form-control-sm">
+                            <label class="form-label small">DD TDS From</label>
+                            <input type="date" name="ddtds_from" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">DD TDS To</label>
+                            <input type="date" name="ddtds_to" class="form-control form-control-sm">
                         </div>
                         <div class="col-md-3">
                             <label class="form-label small">Account Adv</label>

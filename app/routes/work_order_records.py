@@ -322,6 +322,9 @@ def delete(id):
     except Exception as e:
         db.session.rollback()
         flash(f"Cannot delete: {str(e)}", "danger")
+    redirect_target = request.form.get("redirect", "")
+    if redirect_target == "daily-payments":
+        return redirect(url_for("work_order_records.daily_payments"))
     return redirect(url_for("work_order_records.work_orders"))
 
 
@@ -786,6 +789,68 @@ work_order_fields = [
     ("account_name", "Account Name", "text"),
 ]
 
+COLUMN_SYNONYMS = {
+    "lorry_number": ["truck", "vehicle", "lorry", "truck no", "truck number", "vehicle no",
+                      "vehicle number", "truck#", "vehicle#", "lorry no", "lorry number",
+                      "truck_no", "vehicle_no", "lorry_no", "registration", "reg no",
+                      "plate", "truck plate", "vehicle plate", "gaadi", "gaadi no"],
+    "date": ["date", "trip date", "do date", "delivery date", "dispatch date",
+             "trip_date", "do_date", "loading date", "tripdate", "dodate"],
+    "mine_name": ["mine", "mine name", "source", "from", "loading point", "origin",
+                  "mines", "mine_name", "quarry", "quarry name", "minename"],
+    "plant_qty": ["plant qty", "plant quantity", "unload qty", "delivery qty", "qty plant",
+                  "plant_qty", "planted", "plant ton", "plant tons", "delivery qty tons"],
+    "mines_qty": ["mines qty", "mines quantity", "loading qty", "load qty", "mine qty",
+                  "mines_qty", "loaded qty", "mines ton", "mines tons", "load ton"],
+    "rate": ["rate", "rate per ton", "per ton", "price", "freight rate", "rate/ton",
+             "rate per trip", "trip rate", "rate_per_ton"],
+    "total_freight": ["freight", "total freight", "amount", "total amount", "trip amount",
+                      "total_freight", "freight amount", "payable", "total payable"],
+    "cash": ["cash", "cash paid", "cash amount", "peti", "cashpayment", "cash_paid"],
+    "loading": ["loading", "loading charge", "loading cost", "loading fee",
+                "loading_charges", "loading_chrg"],
+    "short_amt": ["short amt", "shortage amount", "shortage", "short amount", "short_amt",
+                  "shortage_amt", "shortageamt"],
+    "munsiyana": ["munsiyana", "munisiyana", "manusiyana", "mansiya", "munsiana",
+                  "munsiyana amount", "commission"],
+    "rtgs": ["rtgs", "neft", "bank transfer", "online transfer", "transfer",
+             "rtgs amount", "neft amount", "bank transfer amount"],
+    "tds": ["tds", "tds amount", "tax deducted", "tax", "tds rate"],
+    "account_advance": ["acc adv", "account advance", "acc advance", "account adv",
+                        "account_advance", "advance account", "accadv"],
+    "remark": ["remark", "remarks", "note", "notes", "comment", "comments",
+               "description", "narration", "narr"],
+    "account_name": ["account", "account name", "party", "party name", "ac name",
+                     "ac_name", "account_name", "firm", "firm name"],
+    "status": ["status", "stage", "state"],
+}
+
+
+def _fuzzy_match_csv_header(header, fields):
+    """Match a CSV header to a field key using synonyms and partial matching."""
+    h = header.lower().strip()
+    h_clean = h.replace("-", " ").replace("_", " ").replace("#", "").strip()
+
+    for fkey, flabel, ftype in fields:
+        if ftype == "computed":
+            continue
+        if fkey in COLUMN_SYNONYMS:
+            for syn in COLUMN_SYNONYMS[fkey]:
+                if syn in h_clean or h_clean in syn:
+                    return fkey
+
+    for fkey, flabel, ftype in fields:
+        if ftype == "computed":
+            continue
+        fk_words = fkey.replace("_", " ").split()
+        fl_words = flabel.lower().split()
+        for word in fk_words + fl_words:
+            if len(word) > 3 and word in h_clean:
+                return fkey
+
+    return None
+
+
 @work_order_records_bp.route("/import", methods=["GET", "POST"])
 @login_required
 def import_work_orders():
@@ -809,9 +874,15 @@ def import_work_orders():
         all_rows = [r for r in reader]
         preview_rows = all_rows[:5]
 
-        # NEW: get AI mapping suggestions
+        fuzzy_mappings = {}
+        for idx, header in enumerate(src_headers):
+            matched = _fuzzy_match_csv_header(header, work_order_fields)
+            if matched:
+                fuzzy_mappings[str(idx)] = matched
+
+        ai_mappings = dict(fuzzy_mappings)
+
         groq_api_key = os.environ.get("GROQ_API_KEY")
-        ai_mappings = {}
         if groq_api_key and src_headers:
             field_descriptions = ""
             for _, (fkey, flabel, ftype) in enumerate(work_order_fields):
@@ -858,18 +929,14 @@ Return ONLY the JSON object, no other text.
                     choice = result.get("choices", [{}])[0]
                     message = choice.get("message", {})
                     content = message.get("content", "").strip()
-                    import traceback
-                    print(f"[AI DEBUG] Raw content: {content}")
                     mapping = json.loads(content)
-                    print(f"[AI DEBUG] Parsed mapping: {mapping}")
                     valid_keys = {fkey for fkey, _, _ in work_order_fields}
                     if isinstance(mapping, dict):
-                        high_conf = {str(k): v for k, v in mapping.items() if v and str(v) in valid_keys}
-                        ai_mappings = high_conf
-                        print(f"[AI DEBUG] Final ai_mappings: {ai_mappings}")
-            except (requests.RequestException, json.JSONDecodeError, KeyError, ValueError) as e:
-                print(f"[AI DEBUG] Error: {e}")
-                ai_mappings = {}
+                        for k, v in mapping.items():
+                            if v and str(v) in valid_keys:
+                                ai_mappings[str(k)] = v
+            except (requests.RequestException, json.JSONDecodeError, KeyError, ValueError):
+                pass
 
         return render_template(
             "work_order_records/import.html",
@@ -936,52 +1003,31 @@ def import_execute():
                 mine_id = mine.id
 
             wo_number = current_wo.work_order_number if current_wo else (data.get("work_order_number", None) or None)
-            wo = None
-            if wo_number:
-                wo = WorkOrder.query.filter_by(work_order_number=wo_number).first()
 
-            if wo:
-                wo.date = datetime.strptime(data.get("date", date_str), "%Y-%m-%d").date()
-                wo.lorry_number = data.get("lorry_number", lorry_number)
-                wo.mine_id = mine_id or wo.mine_id
-                wo.tds = float(data.get("tds", 0) or 0)
-                wo.ddtds_from = datetime.strptime(data["ddtds_from"], "%Y-%m-%d").date() if data.get("ddtds_from", "").strip() else None
-                wo.ddtds_to = datetime.strptime(data["ddtds_to"], "%Y-%m-%d").date() if data.get("ddtds_to", "").strip() else None
-                wo.account_advance = float(data.get("account_advance", 0) or 0)
-                wo.mines_qty = float(data.get("mines_qty", 0) or 0)
-                wo.plant_qty = float(data.get("plant_qty", 0) or 0)
-                wo.rate = float(data.get("rate", 0) or 0)
-                wo.cash = float(data.get("cash", 0) or 0)
-                wo.loading = float(data.get("loading", 0) or 0)
-                wo.short_amt = float(data.get("short_amt", 0) or 0)
-                wo.munsiyana = float(data.get("munsiyana", 300) or 300)
-                wo.rtgs = float(data.get("rtgs", 0) or 0)
-                wo.account_name = data.get("account_name", "")
-                wo.remark = data.get("remark", "")
-            else:
-                wo = WorkOrder(
-                    date=datetime.strptime(data.get("date", date_str), "%Y-%m-%d").date(),
-                    lorry_number=data.get("lorry_number", lorry_number),
-                    work_order_number=wo_number,
-                    mine_id=mine_id,
-                    tds=float(data.get("tds", 0) or 0),
-                    ddtds_from=datetime.strptime(data["ddtds_from"], "%Y-%m-%d").date() if data.get("ddtds_from", "").strip() else None,
-                    ddtds_to=datetime.strptime(data["ddtds_to"], "%Y-%m-%d").date() if data.get("ddtds_to", "").strip() else None,
-                    account_advance=float(data.get("account_advance", 0) or 0),
-                    mines_qty=float(data.get("mines_qty", 0) or 0),
-                    plant_qty=float(data.get("plant_qty", 0) or 0),
-                    rate=float(data.get("rate", 0) or 0),
-                    total_freight=0,
-                    cash=float(data.get("cash", 0) or 0),
-                    loading=float(data.get("loading", 0) or 0),
-                    short_amt=float(data.get("short_amt", 0) or 0),
-                    munsiyana=float(data.get("munsiyana", 300) or 300),
-                    balance=0,
-                    rtgs=float(data.get("rtgs", 0) or 0),
-                    account_name=data.get("account_name", ""),
-                    remark=data.get("remark", ""),
-                )
-                db.session.add(wo)
+            wo = WorkOrder(
+                date=datetime.strptime(data.get("date", date_str), "%Y-%m-%d").date(),
+                lorry_number=data.get("lorry_number", lorry_number),
+                work_order_number=wo_number if not current_wo else current_wo.work_order_number,
+                parent_id=current_wo.id if current_wo else None,
+                mine_id=mine_id or (current_wo.mine_id if current_wo else None),
+                tds=float(data.get("tds", 0) or 0),
+                ddtds_from=datetime.strptime(data["ddtds_from"], "%Y-%m-%d").date() if data.get("ddtds_from", "").strip() else None,
+                ddtds_to=datetime.strptime(data["ddtds_to"], "%Y-%m-%d").date() if data.get("ddtds_to", "").strip() else None,
+                account_advance=float(data.get("account_advance", 0) or 0),
+                mines_qty=float(data.get("mines_qty", 0) or 0),
+                plant_qty=float(data.get("plant_qty", 0) or 0),
+                rate=float(data.get("rate", 0) or 0),
+                total_freight=0,
+                cash=float(data.get("cash", 0) or 0),
+                loading=float(data.get("loading", 0) or 0),
+                short_amt=float(data.get("short_amt", 0) or 0),
+                munsiyana=float(data.get("munsiyana", 0) or 0),
+                balance=0,
+                rtgs=float(data.get("rtgs", 0) or 0),
+                account_name=data.get("account_name", ""),
+                remark=data.get("remark", ""),
+            )
+            db.session.add(wo)
             wo.recalculate()
             db.session.flush()
 
@@ -1060,7 +1106,7 @@ def daily_payments():
         rtgs = float(wo.rtgs or 0)
         petrol = sum(float(p.amount or 0) for p in wo.petrol_stations)
 
-        deductions = cash + loading + advance + shortage + short_amt + munsiyana + tds + acc_adv + petrol
+        deductions = cash + loading + advance + short_amt + munsiyana + tds + acc_adv + petrol
         net = freight - deductions
 
         daily_groups[d].append({
@@ -1133,6 +1179,25 @@ def add_daily_payment():
             flash("Date and Lorry Number are required", "danger")
             return redirect(url_for("work_order_records.daily_payments"))
 
+        freight = float(request.form.get("total_freight", 0) or 0)
+        cash = float(request.form.get("cash", 0) or 0)
+        loading = float(request.form.get("loading", 0) or 0)
+        total_advance = float(request.form.get("total_advance", 0) or 0)
+        shortage = float(request.form.get("shortage", 0) or 0)
+        short_amt = float(request.form.get("short_amt", 0) or 0)
+        munsiyana = float(request.form.get("munsiyana", 0) or 0)
+        tds = float(request.form.get("tds", 0) or 0)
+        acc_adv = float(request.form.get("account_advance", 0) or 0)
+        rtgs = float(request.form.get("rtgs", 0) or 0)
+        petrol_amt = float(request.form.get("petrol", 0) or 0)
+
+        petrol_name = request.form.get("petrol_name", "").strip()
+        ddtds_from_str = request.form.get("ddtds_from", "").strip()
+        ddtds_to_str = request.form.get("ddtds_to", "").strip()
+
+        deductions = cash + loading + total_advance + shortage + short_amt + munsiyana + tds + acc_adv + petrol_amt
+        balance = freight - deductions
+
         wo = WorkOrder(
             date=datetime.strptime(date_str, "%Y-%m-%d").date(),
             lorry_number=lorry_number,
@@ -1140,27 +1205,26 @@ def add_daily_payment():
             mine_id=int(request.form.get("mine_id")) if request.form.get("mine_id") else None,
             account_name=request.form.get("account_name", "").strip(),
             remark=request.form.get("remark", "").strip(),
-            total_freight=float(request.form.get("total_freight", 0) or 0),
-            cash=float(request.form.get("cash", 0) or 0),
-            loading=float(request.form.get("loading", 0) or 0),
-            short_amt=float(request.form.get("short_amt", 0) or 0),
-            munsiyana=float(request.form.get("munsiyana", 300) or 300),
-            tds=float(request.form.get("tds", 0) or 0),
-            ddtds_from=datetime.strptime(request.form.get("ddtds_from", "").strip(), "%Y-%m-%d").date() if request.form.get("ddtds_from", "").strip() else None,
-            ddtds_to=datetime.strptime(request.form.get("ddtds_to", "").strip(), "%Y-%m-%d").date() if request.form.get("ddtds_to", "").strip() else None,
-            account_advance=float(request.form.get("account_advance", 0) or 0),
-            rtgs=float(request.form.get("rtgs", 0) or 0),
+            total_freight=freight,
+            cash=cash,
+            loading=loading,
+            total_advance=total_advance,
+            shortage=shortage,
+            short_amt=short_amt,
+            munsiyana=munsiyana,
+            tds=tds,
+            ddtds_from=datetime.strptime(ddtds_from_str, "%Y-%m-%d").date() if ddtds_from_str else None,
+            ddtds_to=datetime.strptime(ddtds_to_str, "%Y-%m-%d").date() if ddtds_to_str else None,
+            account_advance=acc_adv,
+            rtgs=rtgs,
             mines_qty=0,
             plant_qty=0,
             rate=0,
-            balance=0,
+            balance=round(balance, 2),
         )
-        wo.recalculate()
         db.session.add(wo)
         db.session.flush()
 
-        petrol_amt = float(request.form.get("petrol", 0) or 0)
-        petrol_name = request.form.get("petrol_name", "").strip()
         if petrol_amt > 0 and petrol_name:
             ps = PetrolStation(work_order_id=wo.id, name=petrol_name, amount=petrol_amt)
             db.session.add(ps)
